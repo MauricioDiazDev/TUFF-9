@@ -4,6 +4,8 @@ env/
 .venv/
 tuff9_py310/
 
+recognition_plate/sort
+
 # Archivos compilados de Python
 __pycache__/
 *.py[cod]
