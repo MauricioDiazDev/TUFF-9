@@ -1,0 +1,44 @@
+<!-- templates/accounts/login.html -->
+
+{% extends 'base.html' %}
+{% load widget_tweaks %}   {# <— Carga el tag filter add_class #}
+
+{% block title %}Acceder{% endblock %}
+
+{% block content %}
+<div class="container mt-5" style="max-width: 400px;">
+  <h2 class="mb-4">Iniciar sesión</h2>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.errors %}
+      <div class="alert alert-danger">
+        <p>Por favor, corrige los errores:</p>
+        <ul>
+          {% for field in form %}
+            {% for error in field.errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          {% endfor %}
+          {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <!-- Campo username -->
+    <div class="mb-3">
+      <label for="id_username" class="form-label">Usuario</label>
+      {{ form.username|add_class:"form-control" }}
+    </div>
+
+    <!-- Campo password -->
+    <div class="mb-3">
+      <label for="id_password" class="form-label">Contraseña</label>
+      {{ form.password|add_class:"form-control" }}
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">Acceder</button>
+  </form>
+</div>
+{% endblock %}

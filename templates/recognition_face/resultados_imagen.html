@@ -1,0 +1,33 @@
+<!-- templates/recognition_face/resultados_imagen.html -->
+{% extends 'base.html' %}
+
+{% block title %}Resultados Reconocimiento Facial{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Resultados de la búsqueda</h2>
+
+    <!-- Enlace para descargar CSV -->
+    <div class="mb-4 text-center">
+        <a href="{{ csv_url }}" class="btn btn-success" download>Descargar CSV de resultados</a>
+    </div>
+
+    <!-- Galería de recortes (uno por persona) -->
+    <h5>Recortes de caras detectadas</h5>
+    {% if capturas %}
+    <div class="row">
+        {% for imgUrl in capturas %}
+        <div class="col-md-3 mb-3">
+            <img src="{{ imgUrl }}" class="img-thumbnail" alt="Recorte de rostro">
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>No se generaron recortes.</p>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{% url 'dashboard:panel' %}" class="btn btn-secondary">Volver al panel</a>
+    </div>
+</div>
+{% endblock %}

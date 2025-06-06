@@ -1,0 +1,86 @@
+# Entornos virtuales (venv, env, .venv, etc.)
+venv/
+env/
+.venv/
+tuff9_py310/
+
+# Archivos compilados de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Base de datos SQLite (si la usas en desarrollo)
+db.sqlite3
+
+# Archivos de migraciones generados
+*/migrations/*.pyc
+*/migrations/*.py[cod]
+*/migrations/__pycache__/
+# NOTA: no ignores la carpeta migrations en sí, solo los .pyc y __pycache__ dentro de ella.
+
+# Archivos de configuraciones locales
+*.env
+*.local
+*.ini
+*.log
+
+# Carpeta de media/subidas de usuario
+media/
+staticfiles/   # si usas collectstatic para produccion, o builds en production
+/static/        # si tu STATICFILES_DIRS genera archivos en el repo
+
+# VS Code, PyCharm, otros IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# MacOS, Windows y Linux
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs y archivos temporales
+*.log
+*.pot
+*.mo
+*.coverage
+htmlcov/
+.coverage.*
+coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*,cover
+
+# Paquetes instalados
+pip-wheel-metadata/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Archivos de Celery beat, si los generas localmente
+celerybeat-schedule
+
+# Archivos de Docker (si no quieres incluir imágenes o volumes)
+*.env
+
+# Archivos de base de datos de Postgres u otros (si los usas en local)
+*.psql
+*.dump
+
+# Archivos de Jupyter notebooks resultantes (si usas notebooks en el proyecto)
+.ipynb_checkpoints
+
+# Archivos de markdown renderizados o generados
+*.md~
+
+# Archivos de node_modules (si tu proyecto tiene frontend con Node)
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Cualquier otra carpeta local que no quieras versionar
+local_settings.py

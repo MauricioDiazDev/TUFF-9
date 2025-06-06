@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Panel – Dashboard{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+  <div class="col-12">
+    <h2 class="fw-bold mb-2">Panel de Control</h2>
+    <p class="text-muted">
+      Bienvenido al dashboard de Tuff9. Aquí encontrarás un resumen de tus actividades y métricas más importantes.
+    </p>
+  </div>
+</div>
+
+{# ————— Primera fila de métricas principales ————— #}
+<div class="row g-4 mb-4">
+  <div class="col-lg-3 col-sm-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body d-flex align-items-center">
+        <i class="bx bx-user-pin fs-1 text-primary me-3"></i>
+        <div>
+          <h6 class="text-muted mb-1">Total Rostros Reconocidos</h6>
+          <h3 class="fw-bold">1,256</h3>
+          <small class="text-success">
+            <i class="bx bx-up-arrow-alt"></i> 12.5%
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-sm-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body d-flex align-items-center">
+        <i class="bx bx-video fs-1 text-success me-3"></i>
+        <div>
+          <h6 class="text-muted mb-1">Vídeos Procesados</h6>
+          <h3 class="fw-bold">342</h3>
+          <small class="text-danger">
+            <i class="bx bx-down-arrow-alt"></i> 4.3%
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-sm-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body d-flex align-items-center">
+        <i class="bx bx-credit-card fs-1 text-warning me-3"></i>
+        <div>
+          <h6 class="text-muted mb-1">Total Capturas Guardadas</h6>
+          <h3 class="fw-bold">4,812</h3>
+          <small class="text-success">
+            <i class="bx bx-up-arrow-alt"></i> 8.7%
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-sm-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body d-flex align-items-center">
+        <i class="bx bx-user fs-1 text-info me-3"></i>
+        <div>
+          <h6 class="text-muted mb-1">Usuarios Activos</h6>
+          <h3 class="fw-bold">128</h3>
+          <small class="text-success">
+            <i class="bx bx-up-arrow-alt"></i> 3.2%
+          </small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ————— Segunda fila con gráficas y estadísticas ————— #}
+<div class="row g-4 mb-4">
+  <div class="col-xl-8 col-lg-12">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Evolución Mensual de Rostros</h5>
+        <div class="dropdown">
+          <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            2025
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="#">2025</a></li>
+            <li><a class="dropdown-item" href="#">2024</a></li>
+            <li><a class="dropdown-item" href="#">2023</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="card-body">
+        {# Aquí puedes inyectar un canvas de Chart.js u otra librería para gráficos #}
+        <div class="text-center text-muted py-5">
+          [Gráfica Mensual de Rostros Reconocidos]
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4 col-lg-12">
+    <div class="card shadow-sm h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">Resumen Rápido</h5>
+      </div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <small class="text-muted">Total Capturas</small>
+            <h4 class="fw-semibold mb-0">4,812</h4>
+          </div>
+          <div>
+            <i class="bx bx-photo-album fs-2 text-warning"></i>
+          </div>
+        </div>
+        <hr />
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <small class="text-muted">Comparaciones Exactas</small>
+            <h4 class="fw-semibold mb-0">2,357</h4>
+          </div>
+          <div>
+            <i class="bx bx-check-shield fs-2 text-success"></i>
+          </div>
+        </div>
+        <hr />
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <small class="text-muted">Comparaciones Parciales</small>
+            <h4 class="fw-semibold mb-0">1,120</h4>
+          </div>
+          <div>
+            <i class="bx bx-pulse fs-2 text-danger"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ————— Tercera fila con widgets más pequeños ————— #}
+<div class="row g-4 mb-4">
+  <div class="col-lg-3 col-sm-6">
+    <div class="card text-center shadow-sm h-100">
+      <div class="card-body">
+        <i class="bx bx-cog fs-1 text-secondary mb-2"></i>
+        <h6 class="card-title">Configuraciones</h6>
+        <p class="card-text text-muted">Ajustes de la aplicación</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-sm-6">
+    <div class="card text-center shadow-sm h-100">
+      <div class="card-body">
+        <i class="bx bx-calendar fs-1 text-primary mb-2"></i>
+        <h6 class="card-title">Actividad Reciente</h6>
+        <p class="card-text text-muted">Últimas acciones de usuarios</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-sm-6">
+    <div class="card text-center shadow-sm h-100">
+      <div class="card-body">
+        <i class="bx bx-chart fs-1 text-success mb-2"></i>
+        <h6 class="card-title">Estadísticas</h6>
+        <p class="card-text text-muted">Ver más detalles</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-3 col-sm-6">
+    <div class="card text-center shadow-sm h-100">
+      <div class="card-body">
+        <i class="bx bx-support fs-1 text-info mb-2"></i>
+        <h6 class="card-title">Soporte</h6>
+        <p class="card-text text-muted">Contacta al equipo</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

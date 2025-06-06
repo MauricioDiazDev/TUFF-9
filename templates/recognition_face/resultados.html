@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Resultados Reconocimiento Facial{% endblock %}
+
+{% block content %}
+  <div class="container mt-5">
+    <h2>Resultados de la búsqueda</h2>
+
+    <!-- Imagen anotada -->
+    <div class="my-4 text-center">
+      <h5>Imagen anotada</h5>
+      <img
+        src="{{ annotated_image_url }}"
+        alt="Imagen anotada"
+        class="img-fluid border"
+      />
+    </div>
+
+    <!-- Enlace para descargar CSV -->
+    <div class="mb-4 text-center">
+      <a href="{{ csv_url }}" class="btn btn-success" download>
+        Descargar CSV de resultados
+      </a>
+    </div>
+
+    <!-- Listado de coincidencias -->
+    <h5>Coincidencias encontradas</h5>
+    {% if matches %}
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Persona ID</th>
+            <th>DNI</th>
+            <th>Nombre completo</th>
+            <th>Score</th>
+            <th>Ver ficha</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in matches %}
+            <tr>
+              <td>{{ m.id }}</td>
+              <td>{{ m.dni }}</td>
+              <td>{{ m.nombre }}</td>
+              <td>{{ m.score|floatformat:2 }}</td>
+              <td>
+                <a
+                  href="{% url 'recognition_face:ficha_policial' m.id %}"
+                  class="btn btn-link"
+                >
+                  Ficha
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p>No se encontraron coincidencias.</p>
+    {% endif %}
+
+    <div class="mt-4">
+      <a href="{% url 'recognition_face:reconocer_foto' %}" class="btn btn-secondary">
+        Volver a Buscar Imagen
+      </a>
+      <a href="{% url 'recognition_face:reconocer_video' %}" class="btn btn-secondary">
+        Reconocimiento por Vídeo
+      </a>
+    </div>
+  </div>
+{% endblock %}

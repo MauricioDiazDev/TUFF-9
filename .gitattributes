@@ -1,0 +1,2 @@
+ruta/al/archivo_pesado.ext filter=lfs diff=lfs merge=lfs -text
+recognition_plate/models/yolov8x.pt filter=lfs diff=lfs merge=lfs -text
