@@ -1,17 +1,22 @@
 # recognition_plate/tasks_plate.py
 
+from matriculas.models import Matricula
+from personas.models import Persona
+from django.utils import timezone
 import os
 import cv2
 import numpy as np
 import requests
 from pathlib import Path
-import time
+from recognition_plate.api_lock import api_ocr_lock
+import random
+
 
 from celery import shared_task
 from celery.utils.log import get_task_logger
 
 from django.conf import settings
-
+import time
 # Asegúrate de que el directorio `recognition_plate/sort/` tenga un __init__.py
 # y que allí esté el archivo sort.py con la clase Sort.
 from .sort.sort import Sort
@@ -36,7 +41,7 @@ WEIGHTS_PLATE = WEIGHTS_DIR / "license_plate_yolov8.pt"
 
 # API de Plate Recognizer
 OCR_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"  # Ajusta si tu endpoint es diferente
-OCR_API_TOKEN = "d3b3425ec58ff9ceacc41497f255a796e10a8541"
+OCR_API_TOKEN = "742c6ede255a89388a40e99605f1be8c5bcc8d97"
 
 # Directorio para guardar el CSV
 CSV_DIR = Path(settings.MEDIA_ROOT) / "recognition_plate" / "csv"
@@ -68,14 +73,16 @@ def call_plate_recognizer_batch(requests_list):
             continue
 
         files = {"upload": ("plate.jpg", buffer.tobytes(), "image/jpeg")}
-        try:
-            resp = requests.post(OCR_API_URL, files=files, headers=headers, timeout=10)
-            data = resp.json()
-        except Exception as e:
-            logger.error(f"[OCR] Error al llamar a la API para track {track_id}: {e}")
-            continue
+
+        with api_ocr_lock:
+            try:
+                resp = requests.post(OCR_API_URL, files=files, headers=headers, timeout=10)
+                data = resp.json()
+            except Exception as e:
+                logger.error(f"[OCR] Error al llamar a la API para track {track_id}: {e}")
+                continue
         
-        time.sleep(1.5)
+            time.sleep(random.uniform(1.5, 2.5))
 
         # La respuesta tiene la estructura {"results": [ { "plate": "...", "region": {"code": "ES"}, "confidence": 0.?? }, ... ] }
         if not data.get("results"):
@@ -330,4 +337,158 @@ def process_video_plate(self, video_path):
         "processed_frames": processed_frames,
         "total_frames": total_frames,
         "csv_unicas": str(CSV_UNICAS_REL)
+    }
+
+
+@shared_task(bind=True)
+def process_image_plate(self, rutas_imagenes):
+
+    DETECTION_THRESHOLD_VEH = 0.20
+    DETECTION_THRESHOLD_PLATE = 0.65
+
+    WEIGHTS_DIR = Path(settings.BASE_DIR) / "recognition_plate" / "models"
+    WEIGHTS_VEH = WEIGHTS_DIR / "vehiculos_yolov8n.pt"
+    WEIGHTS_PLATE = WEIGHTS_DIR / "license_plate_yolov8.pt"
+
+    CSV_DIR = Path(settings.MEDIA_ROOT) / "recognition_plate" / "csv"
+    CSV_DIR.mkdir(parents=True, exist_ok=True)
+    CSV_UNICAS = CSV_DIR / "placas_unicas.csv"
+
+    ANNOTATED_DIR = Path(settings.MEDIA_ROOT) / "recognition_plate" / "annotated"
+    ANNOTATED_DIR.mkdir(parents=True, exist_ok=True)
+
+    OCR_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
+    OCR_API_TOKEN = "742c6ede255a89388a40e99605f1be8c5bcc8d97"
+
+    veh_model = YOLO(str(WEIGHTS_VEH))
+    plate_model = YOLO(str(WEIGHTS_PLATE))
+
+    resultados_csv = []
+
+    for img_path in rutas_imagenes:
+        nombre_img = Path(img_path).name
+        print(f"\n🖼️ Procesando imagen: {nombre_img}")
+        imagen = cv2.imread(img_path)
+        if imagen is None:
+            print(f"⚠️ No se pudo cargar la imagen: {img_path}")
+            continue
+
+        results_veh = veh_model(imagen, device=0, imgsz=(800, 800), conf=DETECTION_THRESHOLD_VEH)[0]
+        vehiculos = [
+            list(map(int, box.tolist()))
+            for box, cls in zip(results_veh.boxes.xyxy, results_veh.boxes.cls)
+            if int(cls) in (2, 3, 5, 7)
+        ]
+        print(f"🚗 Vehículos detectados: {len(vehiculos)}")
+
+        placas_finales = {}
+
+        for idx, (vx1, vy1, vx2, vy2) in enumerate(vehiculos):
+            crop_veh = imagen[vy1:vy2, vx1:vx2]
+            if crop_veh.size == 0:
+                continue
+
+            res_placa = plate_model([crop_veh], device=0, imgsz=(640, 640), conf=DETECTION_THRESHOLD_PLATE)[0]
+            if len(res_placa.boxes) == 0:
+                continue
+
+            best_box = None
+            best_conf = 0.0
+            for box, conf in zip(res_placa.boxes.xyxy, res_placa.boxes.conf):
+                c = float(conf)
+                if c > best_conf:
+                    best_box = box.cpu().numpy().astype(int)
+                    best_conf = c
+
+            if best_box is None:
+                continue
+
+            px1, py1, px2, py2 = best_box
+            abs_px1, abs_py1, abs_px2, abs_py2 = vx1 + px1, vy1 + py1, vx1 + px2, vy1 + py2
+            crop_placa = imagen[abs_py1:abs_py2, abs_px1:abs_px2]
+            if crop_placa.size == 0:
+                continue
+
+            success, buffer = cv2.imencode(".jpg", crop_placa)
+            if not success:
+                continue
+
+            files = {"upload": ("plate.jpg", buffer.tobytes(), "image/jpeg")}
+            headers = {"Authorization": f"Token {OCR_API_TOKEN}"}
+
+            with api_ocr_lock:
+                try:
+                    resp = requests.post(OCR_API_URL, files=files, headers=headers, timeout=10)
+                    data = resp.json()
+                except Exception as e:
+                    print(f"🛑 Error OCR: {e}")
+                    continue
+                time.sleep(random.uniform(1.5, 2.5))
+
+            if not data.get("results"):
+                continue
+
+            top = data["results"][0]
+            plate = top.get("plate", "").upper().replace("-", "").replace(" ", "")
+            score = top.get("score", 0.0)
+            country = top.get("region", {}).get("code", "")
+
+            if not plate or not country or country.lower() == "unknown":
+                continue
+
+            key = f"{nombre_img}_vehiculo_{idx}"
+            placas_finales[key] = {
+                "plate": plate,
+                "score": score,
+                "country": country,
+                "coords": (abs_px1, abs_py1, abs_px2, abs_py2),
+                "imagen": nombre_img
+            }
+
+        if placas_finales:
+            img_annotated = imagen.copy()
+            for data in placas_finales.values():
+                plate = data["plate"]
+                score = data["score"]
+                country = data["country"]
+                x1, y1, x2, y2 = data["coords"]
+
+                matricula, creada = Matricula.objects.get_or_create(numero=plate)
+                matricula.pais = country.upper()
+                matricula.ultima_vez_vista = timezone.now()
+                if creada:
+                    personas = list(Persona.objects.all())
+                    matricula.esta_robado = False
+                    matricula.delitos = ""
+                    matricula.save()
+                    if personas:
+                        matricula.propietarios.add(random.choice(personas))
+                else:
+                    matricula.save()
+
+                resultados_csv.append((plate, country, score, data["imagen"]))
+                cv2.rectangle(img_annotated, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(img_annotated, plate, (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
+            out_path = ANNOTATED_DIR / f"{Path(nombre_img).stem}_anotada.jpg"
+            cv2.imwrite(str(out_path), img_annotated)
+
+        else:
+            print("🕳️ No se anotó nada en la imagen.")
+
+    with open(CSV_UNICAS, "w", encoding="utf-8") as f:
+        f.write("plate,country,confidence,imagen\n")
+        for r in resultados_csv:
+            f.write(f"{r[0]},{r[1]},{r[2]:.3f},{r[3]}\n")
+
+    for img_path in rutas_imagenes:
+        try:
+            os.remove(img_path)
+        except Exception as e:
+            print(f"⚠️ No se pudo borrar {img_path}: {e}")
+
+    return {
+        "total_imagenes": len(rutas_imagenes),
+        "csv_unicas": str(CSV_UNICAS)
     }

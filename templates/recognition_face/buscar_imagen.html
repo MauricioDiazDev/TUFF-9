@@ -1,33 +1,33 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Reconocimiento por Vídeo{% endblock %}
+{% block title %}Reconocimiento por Imagen{% endblock %}
 
 {% block content %}
-<h4 class="fw-bold py-3 mb-4">Reconocimiento facial mediante vídeo</h4>
+<h4 class="fw-bold py-3 mb-4">Reconocimiento facial mediante foto</h4>
 
+<!-- Descripción fija de la funcionalidad -->
 <div class="card mb-4">
   <div class="card-body">
     <p>
-      Sube un archivo de vídeo (MP4, AVI o MOV). El sistema analizará automáticamente los rostros que aparecen
-      y buscará coincidencias con la base de datos utilizando IA.
+      Esta herramienta permite reconocer rostros en una o varias imágenes utilizando un modelo de inteligencia
+      artificial
+      avanzado. Selecciona imágenes desde tu dispositivo y haz clic en <strong>Procesar</strong>. El sistema buscará
+      coincidencias
+      en la base de datos y te mostrará los resultados en pantalla.
     </p>
   </div>
 </div>
 
+<!-- Formulario para subir imágenes -->
 <div class="card mb-4">
   <div class="card-body">
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
-      {% if form.errors %}
+      {% if errores %}
       <div class="alert alert-danger">
         <ul>
-          {% for field in form %}
-          {% for error in field.errors %}
-          <li>{{ error }}</li>
-          {% endfor %}
-          {% endfor %}
-          {% for error in form.non_field_errors %}
+          {% for error in errores %}
           <li>{{ error }}</li>
           {% endfor %}
         </ul>
@@ -35,25 +35,26 @@
       {% endif %}
 
       <div class="mb-3">
-        <label for="video" class="form-label">Selecciona un archivo de vídeo</label>
-        <input class="form-control" type="file" id="video" name="video" accept="video/mp4,video/avi,video/quicktime"
+        <label for="imagenes" class="form-label">Selecciona una o más imágenes</label>
+        <input class="form-control" type="file" id="imagenes" name="imagenes" accept="image/jpeg,image/png" multiple
           required>
       </div>
 
       <button type="submit" class="btn btn-primary">
-        <i class="bx bx-video-plus me-1"></i> Procesar
+        <i class="bx bx-search-alt-2 me-1"></i> Procesar
       </button>
     </form>
   </div>
 </div>
 
+<!-- Loader cuando hay una tarea en curso -->
 {% if task_id %}
 <div class="card">
   <div class="card-body text-center">
     <div class="spinner-border text-primary mb-3" role="status">
       <span class="visually-hidden">Procesando...</span>
     </div>
-    <p class="mb-0">Procesando vídeo... Por favor, espera.</p>
+    <p class="mb-0">Procesando imágenes... Por favor, espera.</p>
   </div>
 </div>
 
@@ -68,7 +69,7 @@
           window.location.href = "{% url 'recognition_face:resultados' task_id %}";
         } else if (data.estado === 'error') {
           clearInterval(interval);
-          estado.innerHTML = '<div class="alert alert-danger">Error al procesar el vídeo.</div>';
+          estado.innerHTML = '<div class="alert alert-danger">Error al procesar las imágenes.</div>';
         }
       });
   }, 3000);

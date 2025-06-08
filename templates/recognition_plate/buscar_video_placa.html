@@ -4,98 +4,91 @@
 {% block title %}Buscar Matrícula en Vídeo{% endblock %}
 
 {% block content %}
-  <div class="container">
-    <h1 class="mb-4">Buscar Matrícula en Vídeo</h1>
+<div class="container">
+  <h1 class="mb-4">Buscar Matrícula en Vídeo</h1>
 
-    {% if form %}
-      <div class="row">
-        <div class="col-md-6">
-          <form method="post" enctype="multipart/form-data" novalidate id="videoForm">
-            {% csrf_token %}
-            {{ form.non_field_errors }}
+  {% if form %}
+  <div class="row">
+    <div class="col-md-6">
+      <form method="post" enctype="multipart/form-data" novalidate id="videoForm">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
 
-            <div class="mb-3">
-              {{ form.video.label_tag }}
-              {{ form.video }}
-              {% if form.video.help_text %}
-                <div class="form-text">{{ form.video.help_text }}</div>
-              {% endif %}
-              {{ form.video.errors }}
-            </div>
-
-            <div class="mb-3">
-              {{ form.frame_step.label_tag }}
-              {{ form.frame_step }}
-              {% if form.frame_step.help_text %}
-                <div class="form-text">{{ form.frame_step.help_text }}</div>
-              {% endif %}
-              {{ form.frame_step.errors }}
-            </div>
-
-            <div class="mb-3">
-              {{ form.threshold.label_tag }}
-              {{ form.threshold }}
-              {% if form.threshold.help_text %}
-                <div class="form-text">{{ form.threshold.help_text }}</div>
-              {% endif %}
-              {{ form.threshold.errors }}
-            </div>
-
-            <button type="submit" class="btn btn-primary">Subir Vídeo y Comenzar</button>
-          </form>
+        <div class="mb-3">
+          {{ form.video.label_tag }}
+          {{ form.video }}
+          {% if form.video.help_text %}
+          <div class="form-text">{{ form.video.help_text }}</div>
+          {% endif %}
+          {{ form.video.errors }}
         </div>
-      </div>
-    {% endif %}
 
-    {# Campo oculto que contiene el task_id tras hacer POST exitoso #}
-    {% if task_id %}
-      <input type="hidden" name="task_id" value="{{ task_id }}">
-    {% endif %}
-
-    {# Sección de progreso: invisible al principio #}
-    <div id="progressSection" class="mt-4" style="display: none;">
-      <h5>Progreso del Procesamiento:</h5>
-      <div class="progress mb-3">
-        <div
-          id="progressBar"
-          class="progress-bar"
-          role="progressbar"
-          style="width: 0%;"
-          aria-valuenow="0"
-          aria-valuemin="0"
-          aria-valuemax="100"
-        >
-          0%
+        <div class="mb-3">
+          {{ form.frame_step.label_tag }}
+          {{ form.frame_step }}
+          {% if form.frame_step.help_text %}
+          <div class="form-text">{{ form.frame_step.help_text }}</div>
+          {% endif %}
+          {{ form.frame_step.errors }}
         </div>
-      </div>
-      <div id="statusText"></div>
-    </div>
 
-    {# Sección de resultado final: oculta al principio #}
-    <div id="resultSection" class="mt-4" style="display: none;">
-      <h5>Procesamiento Finalizado</h5>
-      <ul class="list-group">
-        <li class="list-group-item">
-          <a id="linkCsvUnicas" href="#" download>
-            Descargar CSV de Placas Únicas
-          </a>
-        </li>
-        <li class="list-group-item">
-          <a id="linkCsvOcurrencias" href="#" download>
-            Descargar CSV de Ocurrencias
-          </a>
-        </li>
-      </ul>
-      <a href="{% url 'recognition_plate:reconocer_placa_video' %}" class="btn btn-secondary mt-3">
-        Volver
-      </a>
+        <div class="mb-3">
+          {{ form.threshold.label_tag }}
+          {{ form.threshold }}
+          {% if form.threshold.help_text %}
+          <div class="form-text">{{ form.threshold.help_text }}</div>
+          {% endif %}
+          {{ form.threshold.errors }}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Subir Vídeo y Comenzar</button>
+      </form>
     </div>
   </div>
+  {% endif %}
+
+  {# Campo oculto que contiene el task_id tras hacer POST exitoso #}
+  {% if task_id %}
+  <input type="hidden" name="task_id" value="{{ task_id }}">
+  {% endif %}
+
+  {# Sección de progreso: invisible al principio #}
+  <div id="progressSection" class="mt-4" style="display: none;">
+    <h5>Progreso del Procesamiento:</h5>
+    <div class="progress mb-3">
+      <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0"
+        aria-valuemin="0" aria-valuemax="100">
+        0%
+      </div>
+    </div>
+    <div id="statusText"></div>
+  </div>
+
+  {# Sección de resultado final: oculta al principio #}
+  <div id="resultSection" class="mt-4" style="display: none;">
+    <h5>Procesamiento Finalizado</h5>
+    <ul class="list-group">
+      <li class="list-group-item">
+        <a id="linkCsvUnicas" href="#" download>
+          Descargar CSV de Placas Únicas
+        </a>
+      </li>
+      <li class="list-group-item">
+        <a id="linkCsvOcurrencias" href="#" download>
+          Descargar CSV de Ocurrencias
+        </a>
+      </li>
+    </ul>
+    <a href="{% url 'recognition_plate:reconocer_placa_video' %}" class="btn btn-secondary mt-3">
+      Volver
+    </a>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     const videoForm = document.getElementById('videoForm');
     const progressSection = document.getElementById('progressSection');
     const progressBar = document.getElementById('progressBar');
@@ -105,7 +98,7 @@
     const linkCsvOcurrencias = document.getElementById('linkCsvOcurrencias');
 
     if (videoForm) {
-      videoForm.addEventListener('submit', function(event) {
+      videoForm.addEventListener('submit', function (event) {
         event.preventDefault();
 
         // Ocultar el formulario y mostrar la sección de progreso
@@ -122,73 +115,73 @@
             'X-CSRFToken': '{{ csrf_token }}'
           }
         })
-        .then(response => response.text())
-        .then(html => {
-          // Parseamos el HTML devuelto para extraer el campo oculto task_id
-          const temp = document.createElement('div');
-          temp.innerHTML = html;
-          const taskInput = temp.querySelector('input[name="task_id"]');
-          if (!taskInput) {
-            throw new Error('No se recibió task_id del servidor');
-          }
-          const taskId = taskInput.value;
-          statusText.innerText = 'Procesando vídeo (Tarea: ' + taskId + ')';
+          .then(response => response.text())
+          .then(html => {
+            // Parseamos el HTML devuelto para extraer el campo oculto task_id
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            const taskInput = temp.querySelector('input[name="task_id"]');
+            if (!taskInput) {
+              throw new Error('No se recibió task_id del servidor');
+            }
+            const taskId = taskInput.value;
+            statusText.innerText = 'Procesando vídeo (Tarea: ' + taskId + ')';
 
-          // Iniciamos el sondeo al endpoint de estado cada 2 segundos
-          pollTaskStatus(taskId);
-        })
-        .catch(err => {
-          console.error(err);
-          statusText.innerText = 'Error al encolar la tarea. Revisa la consola.';
-        });
+            // Iniciamos el sondeo al endpoint de estado cada 2 segundos
+            pollTaskStatus(taskId);
+          })
+          .catch(err => {
+            console.error(err);
+            statusText.innerText = 'Error al encolar la tarea. Revisa la consola.';
+          });
       });
     }
 
     function pollTaskStatus(taskId) {
       const url = "{% url 'recognition_plate:estado_video_placa' 'TASK_PLACEHOLDER' %}"
-                    .replace('TASK_PLACEHOLDER', taskId);
+        .replace('TASK_PLACEHOLDER', taskId);
 
       fetch(url)
-      .then(resp => resp.json())
-      .then(data => {
-        const info = data.info;
-        if (data.state === 'PENDING' || data.state === 'STARTED') {
-          // Actualizar barra de progreso
-          const processed = info.processed_frames;
-          const total = info.total_frames;
-          const pct = total > 0 ? Math.round((processed / total) * 100) : 0;
-          progressBar.style.width = pct + '%';
-          progressBar.setAttribute('aria-valuenow', pct);
-          progressBar.innerText = pct + '%';
-          statusText.innerText = `Procesando: ${processed} de ${total} frames...`;
+        .then(resp => resp.json())
+        .then(data => {
+          const info = data.info;
+          if (data.state === 'PENDING' || data.state === 'STARTED') {
+            // Actualizar barra de progreso
+            const processed = info.processed_frames;
+            const total = info.total_frames;
+            const pct = total > 0 ? Math.round((processed / total) * 100) : 0;
+            progressBar.style.width = pct + '%';
+            progressBar.setAttribute('aria-valuenow', pct);
+            progressBar.innerText = pct + '%';
+            statusText.innerText = `Procesando: ${processed} de ${total} frames...`;
 
-          setTimeout(() => pollTaskStatus(taskId), 2000);
-        }
-        else if (data.state === 'SUCCESS') {
-          // Progreso al 100% y mostrar enlaces
-          progressBar.style.width = '100%';
-          progressBar.setAttribute('aria-valuenow', 100);
-          progressBar.innerText = '100%';
-          statusText.innerText = 'Finalizado.';
+            setTimeout(() => pollTaskStatus(taskId), 2000);
+          }
+          else if (data.state === 'SUCCESS') {
+            // Progreso al 100% y mostrar enlaces
+            progressBar.style.width = '100%';
+            progressBar.setAttribute('aria-valuenow', 100);
+            progressBar.innerText = '100%';
+            statusText.innerText = 'Finalizado.';
 
-          // Rellenar enlaces a los CSV
-          const csvUnicasUrl = info.csv_unicas_url;
-          const csvOcurrenciasUrl = info.csv_ocurrencias_url;
+            // Rellenar enlaces a los CSV
+            const csvUnicasUrl = info.csv_unicas_url;
+            const csvOcurrenciasUrl = info.csv_ocurrencias_url;
 
-          linkCsvUnicas.setAttribute('href', csvUnicasUrl);
-          linkCsvOcurrencias.setAttribute('href', csvOcurrenciasUrl);
+            linkCsvUnicas.setAttribute('href', csvUnicasUrl);
+            linkCsvOcurrencias.setAttribute('href', csvOcurrenciasUrl);
 
-          progressSection.style.display = 'none';
-          resultSection.style.display = 'block';
-        }
-        else if (data.state === 'FAILURE') {
-          statusText.innerText = 'Error en el procesamiento del vídeo.';
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        statusText.innerText = 'Error al consultar el estado del task.';
-      });
+            progressSection.style.display = 'none';
+            resultSection.style.display = 'block';
+          }
+          else if (data.state === 'FAILURE') {
+            statusText.innerText = 'Error en el procesamiento del vídeo.';
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          statusText.innerText = 'Error al consultar el estado del task.';
+        });
     }
   });
 </script>

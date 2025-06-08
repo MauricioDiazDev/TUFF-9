@@ -1,173 +1,46 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Buscar Matrícula en Vídeo{% endblock %}
+{% block title %}Resultados del reconocimiento de matrículas{% endblock %}
 
 {% block content %}
-  <h1 class="mb-4">Buscar Matrícula en Vídeo</h1>
+<h4 class="fw-bold py-3 mb-4">Resultados del reconocimiento</h4>
 
-  {% if form %}
-    <div class="row">
-      <div class="col-md-6">
-        <form method="post" enctype="multipart/form-data" novalidate id="videoForm">
-          {% csrf_token %}
-          {{ form.non_field_errors }}
-
-          <div class="mb-3">
-            {{ form.video.label_tag }}
-            {{ form.video }}
-            {% if form.video.help_text %}
-              <div class="form-text">{{ form.video.help_text }}</div>
-            {% endif %}
-            {{ form.video.errors }}
-          </div>
-
-          <div class="mb-3">
-            {{ form.frame_step.label_tag }}
-            {{ form.frame_step }}
-            {% if form.frame_step.help_text %}
-              <div class="form-text">{{ form.frame_step.help_text }}</div>
-            {% endif %}
-            {{ form.frame_step.errors }}
-          </div>
-
-          <button type="submit" class="btn btn-primary">Subir Vídeo y Comenzar</button>
-        </form>
-      </div>
+{% if resultados %}
+{% for placa in resultados %}
+<div
+  class="card mb-3 {% if not placa.registrada %}border-warning bg-warning bg-opacity-10{% else %}border-success{% endif %}">
+  <div class="card-body d-flex align-items-center">
+    <div class="me-4">
+      <img src="{{ placa.imagen }}" alt="Imagen anotada" class="rounded" width="150" height="auto">
     </div>
-  {% endif %}
+    <div>
+      <h5 class="mb-1">Matrícula: <strong>{{ placa.matricula }}</strong></h5>
+      <p class="mb-1"><strong>País:</strong> {{ placa.pais }}</p>
+      <p class="mb-1"><strong>Confianza OCR:</strong> {{ placa.confianza }}</p>
 
-  {% if task_id %}
-    <input type="hidden" name="task_id" value="{{ task_id }}">
-  {% endif %}
-
-  <div id="progressSection" class="mt-4" style="display: none;">
-    <h5>Progreso del Procesamiento:</h5>
-    <div class="progress mb-3">
-      <div
-        id="progressBar"
-        class="progress-bar"
-        role="progressbar"
-        style="width: 0%;"
-        aria-valuenow="0"
-        aria-valuemin="0"
-        aria-valuemax="100"
-      >
-        0%
-      </div>
+      {% if placa.registrada %}
+      <p class="mb-1 text-success fw-semibold">✔️ Matrícula registrada en el sistema</p>
+      <a href="{% url 'admin:matriculas_matricula_change' placa.id_ficha %}"
+        class="btn btn-sm btn-outline-primary mt-2">
+        Ver ficha policial
+      </a>
+      {% else %}
+      <p class="mb-1 text-warning fw-semibold">🆕 Nueva matrícula detectada y registrada</p>
+      {% endif %}
     </div>
-    <div id="statusText"></div>
   </div>
+</div>
+{% endfor %}
 
-  <div id="resultSection" class="mt-4" style="display: none;">
-    <h5>Procesamiento Finalizado</h5>
-    <ul class="list-group">
-      <li class="list-group-item">
-        <a id="linkCsvUnicas" href="#" download>
-          Descargar CSV de Placas Únicas
-        </a>
-      </li>
-      <li class="list-group-item">
-        <a id="linkCsvOcurrencias" href="#" download>
-          Descargar CSV de Ocurrencias
-        </a>
-      </li>
-    </ul>
-    <a href="{% url 'recognition_plate:reconocer_placa_video' %}" class="btn btn-secondary mt-3">
-      Volver
-    </a>
-  </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const videoForm = document.getElementById('videoForm');
-    const progressSection = document.getElementById('progressSection');
-    const progressBar = document.getElementById('progressBar');
-    const statusText = document.getElementById('statusText');
-    const resultSection = document.getElementById('resultSection');
-    const linkCsvUnicas = document.getElementById('linkCsvUnicas');
-    const linkCsvOcurrencias = document.getElementById('linkCsvOcurrencias');
-
-    if (videoForm) {
-      videoForm.addEventListener('submit', function(event) {
-        event.preventDefault();
-
-        videoForm.style.display = 'none';
-        progressSection.style.display = 'block';
-        statusText.innerText = 'Encolando tarea...';
-
-        const fd = new FormData(videoForm);
-        fetch("{% url 'recognition_plate:reconocer_placa_video' %}", {
-          method: 'POST',
-          body: fd,
-          headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
-          }
-        })
-        .then(response => response.text())
-        .then(html => {
-          const temp = document.createElement('div');
-          temp.innerHTML = html;
-          const taskInput = temp.querySelector('input[name="task_id"]');
-          if (!taskInput) {
-            throw new Error('No se recibió task_id del servidor');
-          }
-          const taskId = taskInput.value;
-          statusText.innerText = 'Procesando vídeo (Tarea: ' + taskId + ')';
-          pollTaskStatus(taskId);
-        })
-        .catch(err => {
-          console.error(err);
-          statusText.innerText = 'Error al encolar la tarea. Revisa la consola.';
-        });
-      });
-    }
-
-    function pollTaskStatus(taskId) {
-      const url = "{% url 'recognition_plate:estado_video_placa' 'TASK_PLACEHOLDER' %}"
-                    .replace('TASK_PLACEHOLDER', taskId);
-
-      fetch(url)
-      .then(resp => resp.json())
-      .then(data => {
-        const info = data.info;
-        if (data.state === 'PENDING' || data.state === 'STARTED') {
-          const processed = info.processed_frames;
-          const total = info.total_frames;
-          const pct = total > 0 ? Math.round((processed / total) * 100) : 0;
-          progressBar.style.width = pct + '%';
-          progressBar.setAttribute('aria-valuenow', pct);
-          progressBar.innerText = pct + '%';
-          statusText.innerText = `Procesando: ${processed} de ${total} frames...`;
-
-          setTimeout(() => pollTaskStatus(taskId), 2000);
-        }
-        else if (data.state === 'SUCCESS') {
-          progressBar.style.width = '100%';
-          progressBar.setAttribute('aria-valuenow', 100);
-          progressBar.innerText = '100%';
-          statusText.innerText = 'Finalizado.';
-
-          const csvUnicasUrl = data.info.csv_unicas;
-          const csvOcurrenciasUrl = data.info.csv_ocurrencias;
-
-          linkCsvUnicas.setAttribute('href', `${location.origin}${csvUnicasUrl}`);
-          linkCsvOcurrencias.setAttribute('href', `${location.origin}${csvOcurrenciasUrl}`);
-
-          progressSection.style.display = 'none';
-          resultSection.style.display = 'block';
-        }
-        else if (data.state === 'FAILURE') {
-          statusText.innerText = 'Error en el procesamiento del vídeo.';
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        statusText.innerText = 'Error al consultar el estado del task.';
-      });
-    }
-  });
-</script>
+<div class="mt-4">
+  <a href="{{ csv_url }}" download class="btn btn-outline-secondary">
+    <i class="bx bx-download"></i> Descargar CSV de resultados
+  </a>
+</div>
+{% else %}
+<div class="alert alert-warning" role="alert">
+  No se detectaron matrículas válidas en este análisis.
+</div>
+{% endif %}
 {% endblock %}

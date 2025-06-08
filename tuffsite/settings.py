@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'dashboard',  # Nuestra app de dashboard
     'recognition_face',  # Nuestra app de reconocimiento facial
     'personas.apps.PersonasConfig', # Configuración de la app Personas
+    'matriculas',
 ]
 
 MIDDLEWARE = [
@@ -153,6 +154,11 @@ CELERY_TASK_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
 CELERYD_CONCURRENCY = 4  # Ocho si hay más núcleos/GPU
 CELERYD_POOL = 'prefork'
+
+CELERY_TASK_ROUTES = {
+    'recognition_plate.tasks_plate.process_image_plate': {'queue': 'imagenes'},
+    'recognition_plate.tasks_plate.process_video_plate': {'queue': 'videos'},
+}
 
 # Opcionales: formato de serialización
 CELERY_ACCEPT_CONTENT = ['json']

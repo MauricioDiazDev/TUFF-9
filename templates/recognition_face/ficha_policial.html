@@ -1,116 +1,72 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Ficha Policial – {{ persona.nombre }} {{ persona.apellidos }}{% endblock %}
+{% block title %}Ficha Policial{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-  <h2>Ficha Policial</h2>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold" style="font-size: 1.75rem;">Ficha Policial</h4>
+    <a href="{% url 'recognition_face:buscar_imagen' %}" class="btn btn-outline-primary btn-sm">Volver al menú</a>
+</div>
 
-  <!-- Foto principal -->
-  <div class="mb-4 text-center">
-    {% if persona.foto_principal %}
-    <img src="{{ persona.foto_principal.url }}" class="img-fluid border mb-3"
-      style="max-width: 300px; object-fit: cover;">
-    {% else %}
-    <p><em>No hay foto principal definida.</em></p>
+<!-- Tarjeta principal con imagen + info -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+
+    <div class="me-4 mb-3">
+        {% if persona.foto_principal %}
+        <img src="{{ persona.foto_principal.url }}" alt="Foto principal" class="img-fluid" style="max-width: 200px;">
+        {% else %}
+        <div class="text-muted">Sin foto disponible</div>
+        {% endif %}
+    </div>
+
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div>
+            <p><strong>Nombre:</strong> {{ persona.nombre }} {{ persona.apellidos }}</p>
+            <p><strong>DNI:</strong> {{ persona.dni }}</p>
+            <p><strong>Fecha de nacimiento:</strong> {{ persona.fecha_nacimiento }}</p>
+            <p><strong>Nacionalidad:</strong> {{ persona.nacionalidad }}</p>
+            <p><strong>Sexo:</strong> {{ persona.sexo }}</p>
+            <p><strong>En busca y captura:</strong>
+                {% if persona.en_busca_captura %}
+                <span class="text-danger fw-bold">Sí</span>
+                {% else %}
+                No
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+<!-- Tarjeta de direcciones -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="mb-3">Direcciones</h6>
+        {% for direccion in persona.direcciones.all %}
+        <p>
+            <strong>{{ direccion.get_tipo_display }}:</strong>
+            {{ direccion.direccion }}
+            {% if direccion.fecha_inicio or direccion.fecha_fin %}
+            ({{ direccion.fecha_inicio }} - {{ direccion.fecha_fin }})
+            {% endif %}
+        </p>
+        {% empty %}
+        <p class="text-muted">Sin direcciones registradas.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Botones inferiores -->
+<div class="d-flex justify-content-end gap-2">
+    {% if request.GET.task_id %}
+    <a href="{% url 'recognition_face:resultados' request.GET.task_id %}" class="btn btn-outline-secondary">
+        ← Volver a resultados
+    </a>
     {% endif %}
-  </div>
-
-  <!-- Datos Personales -->
-  <h4>Datos Personales</h4>
-  <ul class="list-group mb-4">
-    <li class="list-group-item"><strong>ID:</strong> {{ persona.id }}</li>
-    <li class="list-group-item"><strong>DNI:</strong> {{ persona.dni }}</li>
-    <li class="list-group-item">
-      <strong>Nombre completo:</strong> {{ persona.nombre }} {{ persona.apellidos }}
-    </li>
-    <li class="list-group-item">
-      <strong>Alias:</strong> {{ persona.alias|default:"—" }}
-    </li>
-    <li class="list-group-item">
-      <strong>Fecha de nacimiento:</strong> {{ persona.fecha_nacimiento }}
-    </li>
-    <li class="list-group-item">
-      <strong>Nacionalidad:</strong> {{ persona.nacionalidad }}
-    </li>
-    <li class="list-group-item">
-      <strong>Sexo:</strong> {{ persona.sexo }}
-    </li>
-    <li class="list-group-item">
-      <strong>En busca y captura:</strong>
-      {{ persona.en_busca_captura|yesno:"Sí,No" }}
-    </li>
-    <li class="list-group-item">
-      <strong>Fecha de registro:</strong> {{ persona.fecha_registro }}
-    </li>
-  </ul>
-
-  <!-- Direcciones -->
-  <h4>Direcciones</h4>
-  {% if persona.direcciones.all %}
-  <ul class="list-group mb-4">
-    {% for dir in persona.direcciones.all %}
-    <li class="list-group-item">
-      {{ dir.direccion }} ({{ dir.tipo }})
-      <br>
-      <small>
-        {% if dir.fecha_inicio %}Desde {{ dir.fecha_inicio }}{% endif %}
-        {% if dir.fecha_fin %} hasta {{ dir.fecha_fin }}{% endif %}
-      </small>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p>No hay direcciones registradas.</p>
-  {% endif %}
-
-  <!-- Antecedentes -->
-  <h4>Antecedentes</h4>
-  {% if persona.antecedentes.all %}
-  <ul class="list-group mb-4">
-    {% for ant in persona.antecedentes.all %}
-    <li class="list-group-item">
-      {{ ant.delito }} – {{ ant.estado }}<br>
-      <small>Fecha: {{ ant.fecha_delito }}, Lugar: {{ ant.lugar }}</small>
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p>No hay antecedentes registrados.</p>
-  {% endif %}
-
-  <!-- Embeddings -->
-  <h4>Embeddings Generados</h4>
-  {% if persona.embeddings.all %}
-  <ul class="list-group mb-4">
-    {% for emb in persona.embeddings.all %}
-    <li class="list-group-item">
-      Embedding creado: {{ emb.fecha_creacion }}
-    </li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p>No se ha generado ningún embedding para esta persona.</p>
-  {% endif %}
-
-  <!-- Centroide -->
-  {% if persona.centroide %}
-  <h4>Centroide</h4>
-  <ul class="list-group mb-4">
-    <li class="list-group-item">
-      Actualizado: {{ persona.centroide.fecha_actualizacion }}
-    </li>
-  </ul>
-  {% endif %}
-
-  <div class="mt-4">
-    <a href="{% url 'recognition_face:reconocer_foto' %}" class="btn btn-secondary">
-      Volver a Buscar Imagen
+    <a href="#" class="btn btn-primary">
+        <i class="bx bx-download"></i> Generar Reporte
     </a>
-    <a href="{% url 'dashboard:panel' %}" class="btn btn-secondary">
-      Volver al Panel
-    </a>
-  </div>
 </div>
 {% endblock %}

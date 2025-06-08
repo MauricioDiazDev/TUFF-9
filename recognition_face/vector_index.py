@@ -1,3 +1,4 @@
+#recognition_face/vector_index.py
 import faiss
 import numpy as np
 from personas.models import EmbeddingPersona, CentroidePersona

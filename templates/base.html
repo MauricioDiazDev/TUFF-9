@@ -1,97 +1,75 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark-style layout-menu-fixed" dir="ltr" data-theme="theme-default">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Reconocimiento Facial{% endblock %}</title>
 
-  <title>{% block title %}Mi Aplicación{% endblock %}</title>
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="{% static 'assets/img/favicon/favicon.ico' %}" />
 
-  {# ---------- CSS de Sneat/Bootstrap (igual que antes) ---------- #}
-  <link rel="stylesheet" href="{% static 'assets/css/demo.css' %}" />
+  <!-- Core CSS -->
   <link rel="stylesheet" href="{% static 'assets/vendor/css/core.css' %}" />
   <link rel="stylesheet" href="{% static 'assets/vendor/css/theme-default.css' %}" />
-  <link rel="stylesheet" href="{% static 'assets/vendor/css/fonts/boxicons.css' %}" />
-  <!-- CSS de páginas específicas (si corresponde) -->
+  <link rel="stylesheet" href="{% static 'assets/vendor/fonts/boxicons.css' %}" />
+  <link rel="stylesheet" href="{% static 'assets/vendor/css/pages/page-auth.css' %}" />
+  <link rel="stylesheet" href="{% static 'assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}" />
+  <link rel="stylesheet" href="{% static 'assets/css/demo.css' %}" />
+
   {% block extra_css %}{% endblock %}
 </head>
 
 <body>
-  {# ----- Contenedor flex para sidebar + contenido ----- #}
-  <div class="d-flex">
 
-    <aside class="bg-white border-end" style="width: 250px; min-height: 100vh">
-      <div class="p-3">
-        <!-- Logo o título del sidebar -->
-        <a href="{% url 'dashboard:index' %}" class="d-flex align-items-center mb-3 text-decoration-none">
-          <i class="bx bx-shield fs-3 text-primary me-2"></i>
-          <span class="fs-4 fw-bold">Tuff9</span>
-        </a>
-        <!-- Separador opcional -->
-        <hr />
+  <div class="layout-wrapper layout-content-navbar">
+    <div class="layout-container">
 
-        {# Lista de enlaces del menú #}
-        <nav class="nav flex-column">
-          <a class="nav-link py-2" href="{% url 'dashboard:index' %}">
-            <i class="bx bx-home me-2"></i> Inicio
-          </a>
-          <a class="nav-link py-2" href="{% url 'dashboard:panel' %}">
-            <i class="bx bx-grid-alt me-2"></i> Panel
-          </a>
-          <a class="nav-link py-2" href="{% url 'recognition_face:reconocer_foto' %}">
-            <i class="bx bx-user-pin me-2"></i> Reconocer Foto
-          </a>
-          <a class="nav-link py-2" href="{% url 'recognition_face:reconocer_video' %}">
-            <i class="bx bx-video me-2"></i> Reconocer Vídeo
-          </a>
-          <a class="nav-link py-2" href="{% url 'admin:personas_persona_changelist' %}">
-            <i class="bx bx-briefcase me-2"></i> Gestión Personas
-          </a>
-          {# Si quieres añadir más enlaces, repite la línea anterior con el icono y el URL #}
-        </nav>
-      </div>
-    </aside>
+      <!-- Sidebar -->
+      {% include 'includes/sidebar.html' %}
+      <!-- /Sidebar -->
 
-    <main class="flex-grow-1">
-      {# Pasamos el navbar a dentro del main, arriba de todo #}
-      <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <div class="container-fluid">
-          <a class="navbar-brand" href="{% url 'dashboard:index' %}">
-            <img src="{% static 'assets/img/logo.png' %}" width="30" alt="Logo" />
-            <span>Tuff9</span>
-          </a>
-          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup">
-            <span class="navbar-toggler-icon"></span>
-          </button>
-          <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-            <div class="navbar-nav ms-auto">
-              <a class="nav-link" href="{% url 'dashboard:index' %}">Inicio</a>
-              <a class="nav-link" href="{% url 'dashboard:panel' %}">Panel</a>
-            </div>
+      <!-- Page content -->
+      <div class="layout-page">
+        <div class="content-wrapper">
+          <div class="container-xxl flex-grow-1 container-p-y">
+            {% block content %}{% endblock %}
           </div>
-        </div>
-      </nav>
 
-      <div class="container-fluid p-4">
-        {% block content %}{% endblock %}
+          <!-- Footer -->
+          {% include 'includes/footer.html' %}
+          <!-- /Footer -->
+        </div>
       </div>
-    </main>
+      <!-- /Page content -->
+
+    </div>
   </div>
 
-  {# ---------- JS de Sneat/Bootstrap ---------- #}
-  <script src="{% static 'assets/vendor/js/bootstrap.bundle.min.js' %}"></script>
+  <!-- Core JS -->
+  <script>
+    // Forzar tema oscuro al cargar
+    localStorage.setItem('templateCustomizer-theme', 'dark');
+  </script>
   <script src="{% static 'assets/vendor/js/helpers.js' %}"></script>
-  <script src="{% static 'assets/vendor/js/menu.js' %}"></script>
   <script src="{% static 'assets/js/config.js' %}"></script>
-  <script src="{% static 'assets/js/extended-ui-perfect-scrollbar.js' %}"></script>
+
+  <script src="{% static 'assets/vendor/js/bootstrap.js' %}"></script>
+  <script src="{% static 'assets/vendor/js/menu.js' %}"></script>
+  <script src="{% static 'assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js' %}"></script>
   <script src="{% static 'assets/js/main.js' %}"></script>
-  <script src="{% static 'assets/js/ui-modals.js' %}"></script>
-  <script src="{% static 'assets/js/ui-toasts.js' %}"></script>
-  <script src="{% static 'assets/js/dashboards-analytics.js' %}"></script>
-  <script src="{% static 'assets/js/form-basic-inputs.js' %}"></script>
-  <script src="{% static 'assets/js/pages-account-settings-account.js' %}"></script>
-  <script src="{% static 'assets/js/ui-popover.js' %}"></script>
+
+  <!-- Inicialización de scroll en sidebar -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const sidebar = document.querySelector('#layout-menu');
+      if (sidebar && typeof PerfectScrollbar !== 'undefined') {
+        new PerfectScrollbar(sidebar);
+      }
+    });
+  </script>
+
   {% block extra_js %}{% endblock %}
 </body>
 
