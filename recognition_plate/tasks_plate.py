@@ -7,6 +7,7 @@ import os
 import cv2
 import numpy as np
 import requests
+from recognition_plate.sort.sort import iou_batch
 from pathlib import Path
 from recognition_plate.api_lock import api_ocr_lock
 import random
@@ -31,7 +32,7 @@ logger = get_task_logger(__name__)
 # ---------------------------------------
 
 # Umbrales de detección
-DETECTION_THRESHOLD_VEH = 0.60
+DETECTION_THRESHOLD_VEH = 0.40
 DETECTION_THRESHOLD_PLATE = 0.65
 
 # Ruta a los pesos de YOLOv8 (vehículos y placas)
@@ -342,25 +343,23 @@ def process_video_plate(self, video_path):
 
 @shared_task(bind=True)
 def process_image_plate(self, rutas_imagenes):
+    # Umbrales
+    DETECTION_THRESHOLD_PLATE = 0.45
+    IOU_CLUSTER_THRESH        = 0.5
 
-    DETECTION_THRESHOLD_VEH = 0.20
-    DETECTION_THRESHOLD_PLATE = 0.65
-
-    WEIGHTS_DIR = Path(settings.BASE_DIR) / "recognition_plate" / "models"
-    WEIGHTS_VEH = WEIGHTS_DIR / "vehiculos_yolov8n.pt"
-    WEIGHTS_PLATE = WEIGHTS_DIR / "license_plate_yolov8.pt"
-
-    CSV_DIR = Path(settings.MEDIA_ROOT) / "recognition_plate" / "csv"
+    # Paths
+    WEIGHTS_PLATE = Path(settings.BASE_DIR) / "recognition_plate" / "models" / "license_plate_yolov8.pt"
+    CSV_DIR       = Path(settings.MEDIA_ROOT) / "recognition_plate" / "csv"
     CSV_DIR.mkdir(parents=True, exist_ok=True)
-    CSV_UNICAS = CSV_DIR / "placas_unicas.csv"
-
+    CSV_UNICAS    = CSV_DIR / "placas_unicas.csv"
     ANNOTATED_DIR = Path(settings.MEDIA_ROOT) / "recognition_plate" / "annotated"
     ANNOTATED_DIR.mkdir(parents=True, exist_ok=True)
 
-    OCR_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
-    OCR_API_TOKEN = "742c6ede255a89388a40e99605f1be8c5bcc8d97"
+    # API OCR
+    OCR_API_URL   = "https://api.platerecognizer.com/v1/plate-reader/"
+    OCR_API_TOKEN = settings.PLATE_RECOGNIZER_TOKEN  # asegúrate de tenerlo en settings
 
-    veh_model = YOLO(str(WEIGHTS_VEH))
+    # Carga modelo de placas
     plate_model = YOLO(str(WEIGHTS_PLATE))
 
     resultados_csv = []
@@ -368,93 +367,101 @@ def process_image_plate(self, rutas_imagenes):
     for img_path in rutas_imagenes:
         nombre_img = Path(img_path).name
         print(f"\n🖼️ Procesando imagen: {nombre_img}")
-        imagen = cv2.imread(img_path)
-        if imagen is None:
-            print(f"⚠️ No se pudo cargar la imagen: {img_path}")
+        img = cv2.imread(img_path)
+        if img is None:
+            print(f"⚠️ No se pudo cargar {img_path}")
             continue
 
-        results_veh = veh_model(imagen, device=0, imgsz=(800, 800), conf=DETECTION_THRESHOLD_VEH)[0]
-        vehiculos = [
-            list(map(int, box.tolist()))
-            for box, cls in zip(results_veh.boxes.xyxy, results_veh.boxes.cls)
-            if int(cls) in (2, 3, 5, 7)
-        ]
-        print(f"🚗 Vehículos detectados: {len(vehiculos)}")
+        # 1️⃣ Detectar todas las placas en la imagen
+        res = plate_model(img, device=0, imgsz=(800,800), conf=DETECTION_THRESHOLD_PLATE)[0]
+        boxes = [list(map(int,box.cpu().numpy())) for box in res.boxes.xyxy]
+        confs = [float(c) for c in res.boxes.conf]
+        print(f"[DEBUG] placas detectadas (raw): {boxes} con confs {confs}")
+
+        # 2️⃣ Clustering IoU para unificar detecciones solapadas
+        placas = []; placas_confs = []
+        used = set()
+        for i in range(len(boxes)):
+            if i in used: 
+                continue
+            cluster = [i]
+            for j in range(i+1, len(boxes)):
+                if j in used: 
+                    continue
+                bbi = np.array(boxes[i], dtype=float).reshape(1,4)
+                bbj = np.array(boxes[j], dtype=float).reshape(1,4)
+                if float(iou_batch(bbi,bbj)[0,0]) >= IOU_CLUSTER_THRESH:
+                    cluster.append(j)
+                    used.add(j)
+            best = max(cluster, key=lambda k: confs[k])
+            placas.append(boxes[best])
+            placas_confs.append(confs[best])
+        print(f"[DEBUG] placas post-cluster: {placas} con confs {placas_confs}")
 
         placas_finales = {}
 
-        for idx, (vx1, vy1, vx2, vy2) in enumerate(vehiculos):
-            crop_veh = imagen[vy1:vy2, vx1:vx2]
-            if crop_veh.size == 0:
+        # 3️⃣ OCR por cada placa única
+        for idx, ((x1,y1,x2,y2), pc) in enumerate(zip(placas, placas_confs)):
+            print(f"[DEBUG] Placa {idx}: bbox={(x1,y1,x2,y2)}, conf={pc}")
+            crop = img[y1:y2, x1:x2]
+            if crop.size==0:
                 continue
 
-            res_placa = plate_model([crop_veh], device=0, imgsz=(640, 640), conf=DETECTION_THRESHOLD_PLATE)[0]
-            if len(res_placa.boxes) == 0:
-                continue
+            # Preprocesado ligero
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            if gray.shape[1]<100:
+                gray = cv2.resize(gray, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
 
-            best_box = None
-            best_conf = 0.0
-            for box, conf in zip(res_placa.boxes.xyxy, res_placa.boxes.conf):
-                c = float(conf)
-                if c > best_conf:
-                    best_box = box.cpu().numpy().astype(int)
-                    best_conf = c
-
-            if best_box is None:
-                continue
-
-            px1, py1, px2, py2 = best_box
-            abs_px1, abs_py1, abs_px2, abs_py2 = vx1 + px1, vy1 + py1, vx1 + px2, vy1 + py2
-            crop_placa = imagen[abs_py1:abs_py2, abs_px1:abs_px2]
-            if crop_placa.size == 0:
-                continue
-
-            success, buffer = cv2.imencode(".jpg", crop_placa)
+            success, buf = cv2.imencode(".jpg", gray)
             if not success:
                 continue
 
-            files = {"upload": ("plate.jpg", buffer.tobytes(), "image/jpeg")}
-            headers = {"Authorization": f"Token {OCR_API_TOKEN}"}
-
+            # Llamada OCR
+            files   = {"upload":("plate.jpg",buf.tobytes(),"image/jpeg")}
+            headers = {"Authorization":f"Token {OCR_API_TOKEN}"}
             with api_ocr_lock:
-                try:
-                    resp = requests.post(OCR_API_URL, files=files, headers=headers, timeout=10)
-                    data = resp.json()
-                except Exception as e:
-                    print(f"🛑 Error OCR: {e}")
+                resp = requests.post(OCR_API_URL, files=files, headers=headers, timeout=10)
+                print(f"[DEBUG] OCR status={resp.status_code}")
+                if not resp.ok:
+                    print(f"⚠️ OCR no 2xx, salto")
                     continue
-                time.sleep(random.uniform(1.5, 2.5))
+                data = resp.json()
+                time.sleep(random.uniform(1.5,2.5))
 
             if not data.get("results"):
                 continue
 
             top = data["results"][0]
-            plate = top.get("plate", "").upper().replace("-", "").replace(" ", "")
-            score = top.get("score", 0.0)
-            country = top.get("region", {}).get("code", "")
+            plate_text = top.get("plate","").upper().replace("-","").replace(" ","")
+            score      = top.get("score",0.0)
+            country    = top.get("region",{}).get("code","")
+            print(f"[DEBUG] OCR result {idx}: plate={plate_text}, score={score}, country={country}")
 
-            if not plate or not country or country.lower() == "unknown":
+            if not plate_text or not country or country.lower()=="unknown":
                 continue
 
-            key = f"{nombre_img}_vehiculo_{idx}"
+            key = f"{nombre_img}_placa_{idx}"
             placas_finales[key] = {
-                "plate": plate,
+                "plate": plate_text,
                 "score": score,
                 "country": country,
-                "coords": (abs_px1, abs_py1, abs_px2, abs_py2),
+                "coords": (x1,y1,x2,y2),
                 "imagen": nombre_img
             }
 
-        if placas_finales:
-            img_annotated = imagen.copy()
-            for data in placas_finales.values():
-                plate = data["plate"]
-                score = data["score"]
-                country = data["country"]
-                x1, y1, x2, y2 = data["coords"]
+        print(f"[DEBUG] placas_finales keys={list(placas_finales.keys())}")
 
-                matricula, creada = Matricula.objects.get_or_create(numero=plate)
-                matricula.pais = country.upper()
+        # 4️⃣ Guardar resultados & anotar
+        if placas_finales:
+            annotated = img.copy()
+            for d in placas_finales.values():
+                x1,y1,x2,y2 = d["coords"]
+                cv2.rectangle(annotated,(x1,y1),(x2,y2),(0,255,0),2)
+                cv2.putText(annotated,d["plate"],(x1,y1-10),
+                            cv2.FONT_HERSHEY_SIMPLEX,0.8,(0,255,0),2)
+                # BBDD
+                matricula, creada = Matricula.objects.get_or_create(numero=d["plate"])
+                matricula.pais = d["country"].upper()
                 matricula.ultima_vez_vista = timezone.now()
                 if creada:
                     personas = list(Persona.objects.all())
@@ -465,30 +472,20 @@ def process_image_plate(self, rutas_imagenes):
                         matricula.propietarios.add(random.choice(personas))
                 else:
                     matricula.save()
-
-                resultados_csv.append((plate, country, score, data["imagen"]))
-                cv2.rectangle(img_annotated, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(img_annotated, plate, (x1, y1 - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                resultados_csv.append((d["plate"],d["country"],d["score"],d["imagen"]))
 
             out_path = ANNOTATED_DIR / f"{Path(nombre_img).stem}_anotada.jpg"
-            cv2.imwrite(str(out_path), img_annotated)
+            cv2.imwrite(str(out_path), annotated)
 
-        else:
-            print("🕳️ No se anotó nada en la imagen.")
-
-    with open(CSV_UNICAS, "w", encoding="utf-8") as f:
+    # 5️⃣ Volcado CSV y limpieza
+    print(f"[DEBUG] total resultados_csv={len(resultados_csv)}")
+    with open(CSV_UNICAS,"w",encoding="utf-8") as f:
         f.write("plate,country,confidence,imagen\n")
-        for r in resultados_csv:
-            f.write(f"{r[0]},{r[1]},{r[2]:.3f},{r[3]}\n")
+        for plate,country,score,img in resultados_csv:
+            f.write(f"{plate},{country},{score:.3f},{img}\n")
 
-    for img_path in rutas_imagenes:
-        try:
-            os.remove(img_path)
-        except Exception as e:
-            print(f"⚠️ No se pudo borrar {img_path}: {e}")
+    for p in rutas_imagenes:
+        try: os.remove(p)
+        except: pass
 
-    return {
-        "total_imagenes": len(rutas_imagenes),
-        "csv_unicas": str(CSV_UNICAS)
-    }
+    return {"total_imagenes":len(rutas_imagenes),"csv_unicas":str(CSV_UNICAS)}

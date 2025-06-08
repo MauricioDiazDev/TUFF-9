@@ -167,3 +167,5 @@ CELERY_RESULT_SERIALIZER = 'json'
 
 # Zona horaria de Celery (coincide con Django)
 CELERY_TIMEZONE = 'Europe/Madrid'
+
+PLATE_RECOGNIZER_TOKEN="742c6ede255a89388a40e99605f1be8c5bcc8d97"
