@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Usuario Creado{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <h4 class="card-title">Usuario {{ user.username }} creado con éxito</h4>
+        {% if raw_password %}
+        <p><strong>Contraseña generada:</strong> {{ raw_password }}</p>
+        <small class="text-muted">Comunícale esta contraseña al usuario.</small>
+        {% endif %}
+        <a href="{% url 'accounts:user_list' %}" class="btn btn-primary mt-3">
+            Volver al listado de usuarios
+        </a>
+    </div>
+</div>
+{% endblock %}

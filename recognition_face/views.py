@@ -6,9 +6,11 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 
 from .forms import ImagenBusquedaForm
-from .tasks_imagenes import procesar_imagenes_task
+from .tasks import procesar_imagenes_task, procesar_video_task
 from personas.models import Persona
 from celery.result import AsyncResult
+from .forms import VideoBusquedaForm
+from utilidades.models import SearchHistory
 
 
 @login_required
@@ -51,7 +53,15 @@ def buscar_imagen_view(request):
 
         saved_paths.append(ruta)
 
-    task = procesar_imagenes_task.delay(saved_paths)
+    # Registrar en historial de búsquedas faciales (imágenes)
+    history=SearchHistory.objects.create(
+        user=request.user,
+        category='face_image',
+        params={'filenames': [os.path.basename(p) for p in saved_paths]},
+        items_count=len(saved_paths)
+    )
+
+    task = procesar_imagenes_task.delay(saved_paths, history.id)
 
     return render(request, 'recognition_face/buscar_imagen.html', {
         'task_id': task.id
@@ -96,9 +106,6 @@ def ficha_policial(request, persona_id):
         'task_id': task_id
         })
 
-from .forms import VideoBusquedaForm
-from .tasks_video import procesar_video_task
-
 
 @login_required
 def buscar_video_view(request):
@@ -123,7 +130,16 @@ def buscar_video_view(request):
         for chunk in video.chunks():
             f.write(chunk)
 
-    task = procesar_video_task.delay(ruta)
+
+    # Registrar en historial de búsquedas faciales (vídeos)
+    history=SearchHistory.objects.create(
+        user=request.user,
+        category='face_video',
+        params={'video_name': os.path.basename(ruta)},
+        items_count=1
+    )
+
+    task = procesar_video_task.delay(ruta, history.id)
 
     return render(request, 'recognition_face/buscar_video.html', {
         'form': form,

@@ -15,4 +15,7 @@ urlpatterns = [
 
     # Mostrar resultados de placas reconocidas
     path('resultados/', views.mostrar_resultados_placas, name='mostrar_resultados_placas'),
+
+    # Ficha policial de una matrícula específica
+    path('ficha/<int:matricula_id>/', views.ficha_policial, name='ficha_policial'),
 ]

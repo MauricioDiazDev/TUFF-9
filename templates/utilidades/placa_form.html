@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Editar Matrícula{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">Editar Matrícula</h4>
+    <a href="{% url 'utilidades:busqueda_rapida' %}" class="btn btn-outline-secondary btn-sm">Volver</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            {% for field in form %}
+            <div class="mb-3">
+                {{ field.label_tag }}
+                {{ field }}
+                {{ field.help_text|default:"" }}
+                {{ field.errors }}
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

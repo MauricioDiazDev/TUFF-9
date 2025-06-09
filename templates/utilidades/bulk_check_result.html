@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Resultado Chequeo{% endblock %}
+
+{% block content %}
+<h4 class="fw-bold py-3 mb-4">Resultado Chequeo Masivo</h4>
+
+<p>Tipo de chequeo: <strong>{{ bulk_check.get_check_type_display }}</strong></p>
+<p>Fecha: <strong>{{ bulk_check.created_at|date:"Y-m-d H:i:s" }}</strong></p>
+
+<ul class="list-group mb-4">
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+        Archivo de entrada
+        <a href="{{ bulk_check.input_file.url }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bx bx-download"></i> Descargar
+        </a>
+    </li>
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+        Archivo de resultado
+        <a href="{{ bulk_check.result_file.url }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bx bx-download"></i> Descargar
+        </a>
+    </li>
+</ul>
+
+<a href="{% url 'utilidades:bulk_check' %}" class="btn btn-secondary">
+    ← Nuevo Chequeo
+</a>
+{% endblock %}

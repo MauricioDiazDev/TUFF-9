@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Chequeo Masivo{% endblock %}
+
+{% block content %}
+<h4 class="fw-bold py-3 mb-4">Chequeo Masivo</h4>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+
+            <div class="mb-3">
+                {{ form.check_type.label_tag }}
+                {{ form.check_type }}
+                {{ form.check_type.errors }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.input_file.label_tag }}
+                {{ form.input_file }}
+                {{ form.input_file.errors }}
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="bx bx-check-shield"></i> Iniciar Chequeo
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

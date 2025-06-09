@@ -1,0 +1,43 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" dir="ltr" data-theme="theme-default">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}TUFF9{% endblock %}</title>
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="{% static 'assets/vendor/css/core.css' %}" />
+    <link rel="stylesheet" href="{% static 'assets/vendor/css/theme-default.css' %}" />
+    <link rel="stylesheet" href="{% static 'assets/vendor/fonts/boxicons.css' %}" />
+    <link rel="stylesheet" href="{% static 'assets/css/demo.css' %}" />
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    {# Navbar superior #}
+    {% include 'includes/navbar.html' %}
+
+    {# Hero full-bleed #}
+    {% block hero %}{% endblock hero %}
+
+    {# Contenido principal #}
+    <main class="container-xxl flex-grow-1 container-p-y mt-4">
+        {% block content %}{% endblock content %}
+    </main>
+
+    {# Footer #}
+    {% include 'includes/footer.html' %}
+
+    <!-- Core JS -->
+    <script src="{% static 'assets/vendor/js/helpers.js' %}"></script>
+    <script src="{% static 'assets/js/config.js' %}"></script>
+    <script src="{% static 'assets/vendor/js/bootstrap.js' %}"></script>
+    <script src="{% static 'assets/vendor/js/menu.js' %}"></script>
+    <script src="{% static 'assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js' %}"></script>
+    <script src="{% static 'assets/js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

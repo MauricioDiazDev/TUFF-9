@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Reportes{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">Reportes</h4>
+    <a href="{% url 'dashboard:panel' %}" class="btn btn-outline-secondary btn-sm">Volver al menú</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <p class="mb-0">
+            Genera un reporte PDF con la información completa de personas y/o matrículas seleccionadas.
+            Usa los buscadores para añadir ítems y pulsa “Generar Reporte”.
+        </p>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><strong>Personas</strong></div>
+    <div class="card-body">
+        <input type="text" id="person-search" class="form-control mb-2" placeholder="Busca personas por nombre o DNI…"
+            autocomplete="off">
+        <div id="person-list" class="d-flex flex-wrap gap-2"></div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><strong>Matrículas</strong></div>
+    <div class="card-body">
+        <input type="text" id="plate-search" class="form-control mb-2" placeholder="Busca matrículas…"
+            autocomplete="off">
+        <div id="plate-list" class="d-flex flex-wrap gap-2"></div>
+    </div>
+</div>
+
+<div class="d-flex justify-content-end gap-2 mb-5">
+    <a id="download-report" class="btn btn-outline-primary" style="display:none;" download>
+        <i class="bx bx-download"></i> Descargar Reporte
+    </a>
+    <button id="generate-report" class="btn btn-primary">
+        <i class="bx bx-file"></i> Generar Reporte
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const persons = new Map(), plates = new Map();
+
+        function renderChips(container, map) {
+            container.innerHTML = "";
+            map.forEach((label, id) => {
+                const chip = document.createElement('span');
+                chip.className = "badge bg-secondary d-flex align-items-center";
+                chip.textContent = label;
+                const btn = document.createElement('button');
+                btn.type = "button";
+                btn.className = "btn-close btn-close-white btn-sm ms-2";
+                btn.onclick = () => { map.delete(id); renderChips(container, map); };
+                chip.appendChild(btn);
+                container.appendChild(chip);
+            });
+        }
+
+        function setupAutocomplete(inputId, url, map, listEl) {
+            const inp = document.getElementById(inputId);
+            let timer;
+            inp.addEventListener('input', () => {
+                clearTimeout(timer);
+                const q = inp.value.trim();
+                if (!q) return;
+                timer = setTimeout(() => {
+                    fetch(`${url}?q=${encodeURIComponent(q)}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            let dl = document.getElementById(inputId + '-datalist');
+                            if (!dl) {
+                                dl = document.createElement('datalist');
+                                dl.id = inputId + '-datalist';
+                                document.body.appendChild(dl);
+                                inp.setAttribute('list', dl.id);
+                            }
+                            dl.innerHTML = data.results.map(item =>
+                                `<option data-id="${item.id}" value="${item.display}">`
+                            ).join("");
+                        });
+                }, 300);
+            });
+            inp.addEventListener('change', () => {
+                const dl = document.getElementById(inputId + '-datalist');
+                const opt = dl && Array.from(dl.options).find(o => o.value === inp.value);
+                if (opt && !map.has(opt.dataset.id)) {
+                    map.set(opt.dataset.id, opt.value);
+                    renderChips(listEl, map);
+                }
+                inp.value = "";
+            });
+        }
+
+        setupAutocomplete(
+            "person-search",
+            "{% url 'utilidades:autocomplete_personas' %}",
+            persons,
+            document.getElementById("person-list")
+        );
+        setupAutocomplete(
+            "plate-search",
+            "{% url 'utilidades:autocomplete_placas' %}",
+            plates,
+            document.getElementById("plate-list")
+        );
+
+        document.getElementById('generate-report').onclick = () => {
+            const btn = document.getElementById('generate-report');
+            btn.disabled = true;
+            btn.textContent = "Generando…";
+            fetch("{% url 'utilidades:generar_reporte' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    persons: Array.from(persons.keys()),   // coincide con la vista
+                    plates: Array.from(plates.keys())     // coincide con la vista
+                })
+            })
+                .then(r => {
+                    if (!r.ok) throw new Error("HTTP " + r.status);
+                    return r.json();
+                })
+                .then(data => {
+                    const dl = document.getElementById('download-report');
+                    dl.href = data.pdf_url;
+                    dl.style.display = 'inline-block';
+                    btn.disabled = false;
+                    btn.textContent = "Re-generar Reporte";
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Error al generar el reporte.");
+                    btn.disabled = false;
+                    btn.textContent = "Generar Reporte";
+                });
+        };
+    });
+</script>
+{% endblock %}

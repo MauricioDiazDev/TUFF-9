@@ -24,6 +24,7 @@ LOGIN_URL = 'accounts:login'
 
 # Página a la que ir tras un login exitoso (aún no existe, la crearemos luego)
 LOGIN_REDIRECT_URL = '/dashboard/'
+LOGOUT_REDIRECT_URL = '/'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -53,8 +54,10 @@ INSTALLED_APPS = [
     'accounts',  # Nuestra app de cuentas
     'dashboard',  # Nuestra app de dashboard
     'recognition_face',  # Nuestra app de reconocimiento facial
+    'recognition_plate', # Nuestra app de reconocimiento de matrículas
     'personas.apps.PersonasConfig', # Configuración de la app Personas
-    'matriculas',
+    'matriculas', # Nuestra app de matrículas
+    'utilidades',  # Nuestra app de utilidades
 ]
 
 MIDDLEWARE = [
@@ -152,13 +155,23 @@ CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_TASK_ACKS_LATE = True
 CELERYD_PREFETCH_MULTIPLIER = 1
-CELERYD_CONCURRENCY = 4  # Ocho si hay más núcleos/GPU
+CELERYD_CONCURRENCY = 8  # Ocho si hay más núcleos/GPU
 CELERYD_POOL = 'prefork'
 
 CELERY_TASK_ROUTES = {
+     # Matrículas
     'recognition_plate.tasks_plate.process_image_plate': {'queue': 'imagenes'},
     'recognition_plate.tasks_plate.process_video_plate': {'queue': 'videos'},
+
+    # Rostros
+    'recognition_face.tasks.procesar_imagenes_task': {'queue': 'face_imagenes'},
+    'recognition_face.tasks.procesar_video_task': {'queue': 'face_videos'},
+
+    # Utilidades
+    'utilidades.tasks.generar_reporte_task': {'queue': 'utilidades'},
+    'utilidades.tasks.bulk_check_task':    {'queue': 'utilidades'},
 }
+
 
 # Opcionales: formato de serialización
 CELERY_ACCEPT_CONTENT = ['json']
@@ -169,3 +182,5 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Europe/Madrid'
 
 PLATE_RECOGNIZER_TOKEN="742c6ede255a89388a40e99605f1be8c5bcc8d97"
+
+OCR_API_URL="https://api.platerecognizer.com/v1/plate-reader/"

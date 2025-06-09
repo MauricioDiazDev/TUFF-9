@@ -1,0 +1,81 @@
+{% extends 'base_nosidebar.html' %}
+{% load static %}
+
+{% block title %}Contacto – TUFF9{% endblock %}
+
+{% block content %}
+<div class="container-xxl py-5">
+    <div class="row g-4">
+        <!-- Información de Contacto -->
+        <div class="col-lg-6">
+            <h2 class="h3 mb-3">Contacta con TUFF-9</h2>
+            <p>
+                ¿Tienes alguna duda o necesitas soporte con nuestra plataforma de reconocimiento?
+                Estamos aquí para ayudarte.
+            </p>
+            <ul class="list-unstyled mb-4">
+                <li class="mb-2">
+                    <i class="bx bx-map me-2"></i>
+                    Calle Innovación 42, 28001 Madrid, España
+                </li>
+                <li class="mb-2">
+                    <i class="bx bx-phone me-2"></i>
+                    +34 912 345 678
+                </li>
+                <li class="mb-2">
+                    <i class="bx bx-envelope me-2"></i>
+                    <a href="mailto:soporte@tuff9.com" class="text-decoration-none">soporte@tuff9.com</a>
+                </li>
+            </ul>
+
+            <h3 class="h5 mb-2">Horario de atención</h3>
+            <p class="mb-4">
+                Lun – Vie: 09:00 – 18:00<br>
+                Sáb &amp; Dom: Cerrado
+            </p>
+
+            <h3 class="h5 mb-2">Síguenos</h3>
+            <ul class="list-inline">
+                <li class="list-inline-item me-3">
+                    <a href="#" class="text-dark fs-4">
+                        <i class="bx bxl-bitbucket"></i>
+                    </a>
+                </li>
+                <li class="list-inline-item me-3">
+                    <a href="https://www.linkedin.com/in/juan-manuel-torices-gonzález-0430201b8" target="_blank"
+                        class="text-dark fs-4">
+                        <i class="bx bxl-linkedin"></i>
+                    </a>
+                </li>
+                <li class="list-inline-item">
+                    <a href="https://www.linkedin.com/in/mauricio-diaz-b3928423b?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app"
+                        target="_blank" class="text-dark fs-4">
+                        <i class="bx bxl-linkedin"></i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Formulario de Contacto -->
+        <div class="col-lg-6">
+            <h2 class="h3 mb-3">Envíanos un mensaje</h2>
+            <form action="#" method="post">
+                <div class="mb-3">
+                    <label for="contact-name" class="form-label">Nombre</label>
+                    <input type="text" id="contact-name" class="form-control" placeholder="Tu nombre" required>
+                </div>
+                <div class="mb-3">
+                    <label for="contact-email" class="form-label">Correo electrónico</label>
+                    <input type="email" id="contact-email" class="form-control" placeholder="tu@correo.com" required>
+                </div>
+                <div class="mb-3">
+                    <label for="contact-message" class="form-label">Mensaje</label>
+                    <textarea id="contact-message" class="form-control" rows="5"
+                        placeholder="Escribe tu mensaje aquí..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Enviar mensaje</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock content %}

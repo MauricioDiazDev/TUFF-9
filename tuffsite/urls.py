@@ -3,12 +3,22 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
+from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
 
-    # Landing page en '/' (dashboard.index)
-    path('', include('dashboard.urls', namespace='dashboard')),
+    # Rutas de la aplicación principal
+    path('', views.index, name='index'),
+
+    # Rutas de la aplicación principal
+    path('about/', views.about, name='about'),
+
+    # Rutas de contacto
+    path('contact/', views.contact, name='contact'),
+
+    # Rutas de la aplicación de dashboard
+    path('dashboard/', include('dashboard.urls')),
 
     # Login/Logout en '/accounts/...'
     path('accounts/', include('accounts.urls', namespace='accounts')),
@@ -19,7 +29,9 @@ urlpatterns = [
     # Reconocimiento de placas en '/recognition_plate/...'
     path('recognition_plate/', include('recognition_plate.urls', namespace='recognition_plate')),
 
-    # (Más adelante añadiremos rutas de otras apps aquí)
+    # Utilidades en '/utilidades/...'
+    path('utilidades/', include('utilidades.urls', namespace='utilidades'))
+
 
 ]
 

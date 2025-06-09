@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Mi Cuenta{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">Mi Cuenta</h4>
+    <a href="{% url 'accounts:logout' %}" class="btn btn-outline-danger btn-sm">Cerrar sesión</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <p><strong>Usuario:</strong> {{ request.user.username }}</p>
+        <p><strong>Email:</strong> {{ request.user.email }}</p>
+        <p><strong>Fecha de registro:</strong> {{ request.user.date_joined }}</p>
+        <p><strong>Staff:</strong> {{ request.user.is_staff|yesno:"Sí,No" }}</p>
+        <p><strong>Superusuario:</strong> {{ request.user.is_superuser|yesno:"Sí,No" }}</p>
+        <a href="{% url 'utilidades:historial' %}" class="btn btn-outline-primary mt-3">
+            <i class="bx bx-history me-1"></i> Mi Historial de Búsquedas
+        </a>
+    </div>
+</div>
+{% endblock %}

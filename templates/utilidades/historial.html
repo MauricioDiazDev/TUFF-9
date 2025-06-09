@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Historial de Búsquedas{% endblock %}
+
+{% block content %}
+<h4 class="fw-bold py-3 mb-4">Historial de Búsquedas</h4>
+
+{% if history %}
+<div class="list-group mb-4">
+    {% for entry in history %}
+    <div class="list-group-item d-flex justify-content-between align-items-start">
+        <div>
+            <h6 class="mb-1">{{ entry.get_category_display }}</h6>
+            <small class="text-muted">Realizada el {{ entry.timestamp|date:"Y-m-d H:i:s" }}</small>
+            {% if entry.params %}
+            <p class="mb-0"><small>Parámetros: {{ entry.params }}</small></p>
+            {% endif %}
+        </div>
+        <span class="badge bg-primary rounded-pill">{{ entry.user.username }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-warning">No tienes búsquedas registradas.</div>
+{% endif %}
+{% endblock %}

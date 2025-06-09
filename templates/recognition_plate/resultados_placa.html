@@ -21,7 +21,7 @@
 
       {% if placa.registrada %}
       <p class="mb-1 text-success fw-semibold">✔️ Matrícula registrada en el sistema</p>
-      <a href="{% url 'admin:matriculas_matricula_change' placa.id_ficha %}"
+      <a href="{% url 'recognition_plate:ficha_policial' placa.id_ficha %}?task_id={{ request.GET.task_id }}"
         class="btn btn-sm btn-outline-primary mt-2">
         Ver ficha policial
       </a>

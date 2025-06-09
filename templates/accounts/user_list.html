@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">Usuarios</h4>
+    <a href="{% url 'accounts:user_create' %}" class="btn btn-success btn-sm">
+        <i class="bx bx-plus me-1"></i> Crear Usuario
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-striped mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Staff</th>
+                    <th>Superuser</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr>
+                    <td>{{ u.username }}</td>
+                    <td>{{ u.email }}</td>
+                    <td>{{ u.is_staff|yesno:"Sí,No" }}</td>
+                    <td>{{ u.is_superuser|yesno:"Sí,No" }}</td>
+                    <td>
+                        <a href="{% url 'accounts:user_edit' u.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bx bx-edit-alt"></i> Editar
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-3 text-muted">
+                        No hay usuarios registrados.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Resultados de Búsqueda{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">Resultados de "{{ request.GET.q }}"</h4>
+    <a href="{% url 'utilidades:busqueda_rapida' %}" class="btn btn-outline-secondary btn-sm">Nueva búsqueda</a>
+</div>
+
+{% if persona %}
+<div class="card mb-4">
+    <div class="card-header"><strong>Persona Encontrada</strong></div>
+    <div class="card-body">
+        <p><strong>Nombre:</strong> {{ persona.nombre }} {{ persona.apellidos }}</p>
+        <p><strong>DNI:</strong> {{ persona.dni }}</p>
+        <p><strong>Fecha nac.:</strong> {{ persona.fecha_nacimiento }}</p>
+        <p><strong>Sexo:</strong> {{ persona.sexo }}</p>
+        <p><strong>Nacionalidad:</strong> {{ persona.nacionalidad }}</p>
+        <p><strong>En busca y captura:</strong>
+            {% if persona.en_busca_captura %}<span class="text-danger">Sí</span>{% else %}No{% endif %}
+        </p>
+        <div class="mt-3">
+            {% if perms.personas.change_persona %}
+            <a href="{% url 'utilidades:persona_editar' persona.pk %}" class="btn btn-sm btn-outline-primary me-2">
+                Editar
+            </a>
+            {% endif %}
+            {% if perms.personas.delete_persona %}
+            <a href="{% url 'utilidades:persona_borrar' persona.pk %}" class="btn btn-sm btn-outline-danger">
+                Borrar
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if placa %}
+<div class="card mb-4">
+    <div class="card-header"><strong>Matrícula Encontrada</strong></div>
+    <div class="card-body">
+        <p><strong>Número:</strong> {{ placa.numero }}</p>
+        <p><strong>País:</strong> {{ placa.pais }}</p>
+        <p><strong>Robado:</strong> {% if placa.esta_robado %}<span class="text-danger">Sí</span>{% else %}No{% endif %}
+        </p>
+        <p><strong>Delitos:</strong> {{ placa.delitos|default:"—" }}</p>
+        <p><strong>Propietarios:</strong>
+            {% if placa.propietarios.all %}
+            {{ placa.propietarios.all|join:", " }}
+            {% else %}
+            —
+            {% endif %}
+        </p>
+        <div class="mt-3">
+            {% if perms.matriculas.change_matricula %}
+            <a href="{% url 'utilidades:placa_editar' placa.pk %}" class="btn btn-sm btn-outline-primary me-2">
+                Editar
+            </a>
+            {% endif %}
+            {% if perms.matriculas.delete_matricula %}
+            <a href="{% url 'utilidades:placa_borrar' placa.pk %}" class="btn btn-sm btn-outline-danger">
+                Borrar
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not persona and not placa %}
+<div class="alert alert-warning">No se encontraron resultados para esa consulta.</div>
+{% endif %}
+{% endblock %}

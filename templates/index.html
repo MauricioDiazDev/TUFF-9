@@ -1,0 +1,91 @@
+{% extends 'base_nosidebar.html' %}
+{% load static %}
+
+{# 1) Cargamos Arimo y forzamos fondo blanco + tipografía y tamaño #}
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Arimo&display=swap" rel="stylesheet">
+<style>
+  body {
+    background-color: #ffffff !important;
+    font-family: 'Arimo', sans-serif !important;
+    font-size: 1.1rem !important;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  a,
+  li,
+  span,
+  .nav-link,
+  .btn {
+    font-family: 'Arimo', sans-serif !important;
+  }
+
+  /* Ajuste específico de encabezados */
+  h1 {
+    font-size: 2.5rem;
+  }
+
+  h2 {
+    font-size: 2rem;
+  }
+
+  h3 {
+    font-size: 1.75rem;
+  }
+</style>
+{% endblock extra_css %}
+
+{% block title %}Inicio – TUFF9{% endblock title %}
+
+{% block hero %}
+<div class="my-5 text-center">
+  <img src="{% static 'assets/img/elements/portada.png' %}" alt="Portada TUFF9" class="img-fluid rounded"
+    style="max-width: 800px; height: auto;">
+</div>
+{% endblock hero %}
+
+{% block content %}
+<div class="container-xxl py-5">
+
+  {# — ¿Qué es TUFF-9? — #}
+  <div class="p-4 bg-light rounded shadow-sm mb-5">
+    <h2 class="h3 mb-3">¿Qué es TUFF-9?</h2>
+    <p>
+      TUFF-9 es una aplicación web para el reconocimiento automático de rostros y matrículas,
+      desarrollada como Trabajo Fin de Grado. Se basa en Django, emplea Celery para la gestión
+      de tareas asíncronas, utiliza InsightFace y FAISS en el componente de reconocimiento
+      facial, e integra YOLOv8 junto a un servicio OCR para la detección de vehículos y placas.
+    </p>
+  </div>
+
+  {# — Objetivos — #}
+  <div class="p-4 bg-light rounded shadow-sm mb-5">
+    <h2 class="h3 mb-3">Objetivos</h2>
+    <ul class="list-unstyled mb-0">
+      <li class="mb-2">
+        <i class="bx bx-check-circle text-primary me-2"></i>
+        Implementar un sistema fiable de reconocimiento facial.
+      </li>
+      <li class="mb-2">
+        <i class="bx bx-check-circle text-primary me-2"></i>
+        Automatizar la detección y lectura de matrículas.
+      </li>
+      <li class="mb-2">
+        <i class="bx bx-check-circle text-primary me-2"></i>
+        Gestionar el procesamiento en segundo plano de forma eficiente.
+      </li>
+      <li class="mb-2">
+        <i class="bx bx-check-circle text-primary me-2"></i>
+        Ofrecer una interfaz clara e intuitiva para la visualización de resultados.
+      </li>
+    </ul>
+  </div>
+
+</div>
+{% endblock content %}

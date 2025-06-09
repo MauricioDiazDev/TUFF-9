@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{% if creating %}Crear Usuario{% else %}Editar Usuario{% endif %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">{% if creating %}Crear Usuario{% else %}Editar Usuario: {{ user_obj.username }}{% endif %}</h4>
+    <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary btn-sm">Volver</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="post" novalidate>
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            <div class="mb-3">
+                {{ form.username.label_tag }}
+                {{ form.username }}
+                {{ form.username.errors }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.first_name.label_tag }}
+                {{ form.first_name }}
+                {{ form.first_name.errors }}
+            </div>
+
+            <div class="mb-3">
+                {{ form.last_name.label_tag }}
+                {{ form.last_name }}
+                {{ form.last_name.errors }}
+            </div>
+
+            <div class="form-check mb-3">
+                {{ form.is_staff }}
+                {{ form.is_staff.label_tag }}
+            </div>
+
+            <div class="form-check mb-3">
+                {{ form.is_superuser }}
+                {{ form.is_superuser.label_tag }}
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                {% if creating %}Crear{% else %}Guardar{% endif %}
+            </button>
+            {% if creating and form.raw_password %}
+            <div class="alert alert-info mt-3">
+                Contraseña generada: <code>{{ form.raw_password }}</code>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+{% endblock %}

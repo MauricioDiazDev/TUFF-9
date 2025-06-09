@@ -4,9 +4,10 @@
     <div class="app-brand demo">
         <a href="{% url 'recognition_face:buscar_imagen' %}" class="app-brand-link">
             <span class="app-brand-logo">
-                <!-- Puedes cambiar este texto por un logo SVG si tienes uno -->
-                <img src="{% static 'assets/img/elements/ascii_moth_clean.png' %}" alt="Logo" class="logo"
-                    style="width: 70px; height: 70px;">
+                <a href="{% url 'index' %}">
+                    <img src="{% static 'assets/img/elements/logo.png' %}" alt="Logo" class="logo"
+                        style="width: 150px; height: 70px;">
+                </a>
             </span>
         </a>
     </div>
@@ -14,18 +15,28 @@
     <div class="menu-inner-shadow"></div>
 
     <ul class="menu-inner py-1">
-        <!-- Navegación principal -->
+
+        <!-- Dashboard -->
+        <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">Dashboard</span>
+        </li>
+        <li class="menu-item {% if request.resolver_match.url_name == 'panel' %}active{% endif %}">
+            <a href="{% url 'dashboard:panel' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-grid-alt"></i>
+                <div>Panel de Control</div>
+            </a>
+        </li>
+
+        <!-- Reconocimiento Facial -->
         <li class="menu-header small text-uppercase">
             <span class="menu-header-text">Reconocimiento Facial</span>
         </li>
-
         <li class="menu-item {% if request.resolver_match.url_name == 'buscar_imagen' %}active{% endif %}">
             <a href="{% url 'recognition_face:buscar_imagen' %}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-image"></i>
                 <div>Por imagen</div>
             </a>
         </li>
-
         <li class="menu-item {% if request.resolver_match.url_name == 'buscar_video' %}active{% endif %}">
             <a href="{% url 'recognition_face:buscar_video' %}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-video"></i>
@@ -37,14 +48,12 @@
         <li class="menu-header small text-uppercase">
             <span class="menu-header-text">Reconocimiento de Matrículas</span>
         </li>
-
         <li class="menu-item {% if request.resolver_match.url_name == 'reconocer_placa_imagen' %}active{% endif %}">
             <a href="{% url 'recognition_plate:reconocer_placa_imagen' %}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-car"></i>
                 <div>Por imagen</div>
             </a>
         </li>
-
         <li class="menu-item {% if request.resolver_match.url_name == 'reconocer_placa_video' %}active{% endif %}">
             <a href="{% url 'recognition_plate:reconocer_placa_video' %}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-movie"></i>
@@ -52,11 +61,47 @@
             </a>
         </li>
 
-        <!-- Usuarios / otras secciones -->
-        <li class="menu-header small text-uppercase">Usuarios</li>
-        <li class="menu-item"><a href="#" class="menu-link">
-                <div>Reportes</div>
-            </a></li>
-    </ul>
+        <!-- Utilidades -->
+        <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">Utilidades</span>
+        </li>
+        <li class="menu-item {% if request.resolver_match.url_name == 'busqueda_rapida' %}active{% endif %}">
+            <a href="{% url 'utilidades:busqueda_rapida' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-search-alt-2"></i>
+                <div>Búsqueda Rápida</div>
+            </a>
+        </li>
+        <li class="menu-item {% if request.resolver_match.url_name == 'historial' %}active{% endif %}">
+            <a href="{% url 'utilidades:historial' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-history"></i>
+                <div>Historial</div>
+            </a>
+        </li>
+        <li class="menu-item {% if request.resolver_match.url_name == 'reportes' %}active{% endif %}">
+            <a href="{% url 'utilidades:reportes' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-file"></i>
+                <div>Generar Reporte</div>
+            </a>
+        </li>
 
+        <!-- Cuenta -->
+        <li class="menu-header small text-uppercase">
+            <span class="menu-header-text">Cuenta</span>
+        </li>
+        <li class="menu-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+            <a href="{% url 'accounts:profile' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-user"></i>
+                <div>Mi Perfil</div>
+            </a>
+        </li>
+        {% if request.user.is_staff %}
+        <li class="menu-item {% if request.resolver_match.url_name == 'user_list' %}active{% endif %}">
+            <a href="{% url 'accounts:user_list' %}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-shield"></i>
+                <div>Gestión Usuarios</div>
+            </a>
+        </li>
+        {% endif %}
+
+    </ul>
 </aside>

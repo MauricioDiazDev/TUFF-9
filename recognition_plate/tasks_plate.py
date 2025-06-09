@@ -34,20 +34,24 @@ logger = get_task_logger(__name__)
 # Umbrales de detección
 DETECTION_THRESHOLD_VEH = 0.40
 DETECTION_THRESHOLD_PLATE = 0.65
+MIN_REGION_SCORE = 0.3
 
 # Ruta a los pesos de YOLOv8 (vehículos y placas)
 WEIGHTS_DIR = Path(settings.BASE_DIR) / "recognition_plate" / "models"
-WEIGHTS_VEH = WEIGHTS_DIR / "vehiculos_yolov8n.pt"
+WEIGHTS_VEH = WEIGHTS_DIR / "yolov8x.pt"
 WEIGHTS_PLATE = WEIGHTS_DIR / "license_plate_yolov8.pt"
 
+#ruta de fotos anotadas
+ANNOTATED_DIR = Path(settings.MEDIA_ROOT) / "recognition_plate" / "annotated"
+ANNOTATED_DIR.mkdir(parents=True, exist_ok=True)
+
 # API de Plate Recognizer
-OCR_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"  # Ajusta si tu endpoint es diferente
-OCR_API_TOKEN = "742c6ede255a89388a40e99605f1be8c5bcc8d97"
+OCR_API_URL = settings.OCR_API_URL  
+OCR_API_TOKEN = settings.PLATE_RECOGNIZER_TOKEN
 
 # Directorio para guardar el CSV
 CSV_DIR = Path(settings.MEDIA_ROOT) / "recognition_plate" / "csv"
 os.makedirs(CSV_DIR, exist_ok=True)
-CSV_UNICAS_REL = Path("recognition_plate") / "csv" / "placas_unicas.csv"
 
 # Cuántos frames saltar entre cada detección
 FRAME_SKIP = 3
@@ -57,6 +61,7 @@ FRAME_SKIP = 3
 # ---------------------------------------
 
 def call_plate_recognizer_batch(requests_list):
+
     """
     Llama a la API de Plate Recognizer para cada crop_final en requests_list.
     Sólo retorna aquellos resultados cuyo país no sea 'unknown' ni None.
@@ -91,13 +96,32 @@ def call_plate_recognizer_batch(requests_list):
             continue
 
         top = data["results"][0]
-        country = top.get("region", {}).get("code")
-        if not country or country.lower() == "unknown":
-            logger.debug(f"[OCR] País desconocido para track {track_id}: country='{country}' → se omite")
+        raw_region = top.get("region")
+        if isinstance(raw_region, list) and raw_region:
+            region_obj   = raw_region[0]
+            country      = region_obj.get("value", "").upper()
+            region_score = region_obj.get("score", 0.0)
+        elif isinstance(raw_region, dict):
+            country      = raw_region.get("code", "").upper()
+            region_score = raw_region.get("score", 0.0)
+        else:
+            logger.debug(f"[OCR] Región no reconocida para track {track_id}, se omite")
+            continue
+
+
+        if not country or country.lower() == "unknown" or region_score < MIN_REGION_SCORE:
+            logger.debug(
+                f"[OCR] País '{country}' con confianza región={region_score:.3f} para track {track_id} → se omite"
+            )
             continue
 
         plate_text = top.get("plate").upper()
         conf_plate = top.get("score", 0.0)
+
+        if not plate_text:
+            logger.debug(f"[OCR] Placa vacía para track {track_id}, se omite")
+            continue
+
         results[track_id] = {
             "country": country,
             "plate": plate_text,
@@ -114,7 +138,7 @@ def call_plate_recognizer_batch(requests_list):
 # ---------------------------------------
 
 @shared_task(bind=True)
-def process_video_plate(self, video_path):
+def process_video_plate(self, video_path, history_id):
     """
     Tarea Celery que procesa un vídeo para detección y reconocimiento de matrículas:
       1) Comprueba que existen los pesos de YOLOv8.
@@ -130,7 +154,9 @@ def process_video_plate(self, video_path):
       5) Tras procesar todos los frames, reabre el vídeo y, para cada track, extrae
          **solo una vez** el recorte final que tuvo mayor puntuación.
       6) Llama a la API de OCR en batch (una llamada por track_final) y filtra por país.
-      7) Guarda un CSV con (track_id, placa, país, confianza, frame) únicamente para tracks válidos.
+      7) Guarda un CSV con (track_id, placa, país, confianza, frame, imagen) para tracks válidos.
+      8) Genera imágenes anotadas por cada placa detectada.
+      9) Borra el vídeo original y limpia temporales.
     """
 
     # 1) Verificar pesos YOLOv8
@@ -158,16 +184,8 @@ def process_video_plate(self, video_path):
     # 4) Instanciar SORT
     sort_tracker = Sort(max_age=1, min_hits=3, iou_threshold=0.3)
 
-    # Diccionario donde guardamos, para cada track_id, su mejor caja de placa hasta ahora:
-    # best_plate_per_track = {
-    #   track_id: {
-    #       "bbox": [abs_x1, abs_y1, abs_x2, abs_y2],
-    #       "score": mejor_confianza_detect,
-    #       "frame": frame_idx
-    #   }
-    # }
+    # Para almacenar la mejor detección de placa por track
     best_plate_per_track = {}
-
     frame_idx = 0
 
     # 4) Procesar cada frame, saltando FRAME_SKIP
@@ -177,101 +195,65 @@ def process_video_plate(self, video_path):
             break
         frame_idx += 1
 
-        # Saltar frames según FRAME_SKIP
         if (frame_idx - 1) % FRAME_SKIP != 0:
             continue
 
         processed_frames += 1
 
-        # 4.1) Detectar vehículos en GPU
-        results_veh = veh_model(
-            frame,
-            device=0,
-            imgsz=(800, 800),
-            conf=DETECTION_THRESHOLD_VEH
-        )[0]
-
-        # Construimos array de detecciones [[x1,y1,x2,y2,conf], ...]
+        # 4.1) Detectar vehículos
+        results_veh = veh_model(frame, device=0, imgsz=(800, 800), conf=DETECTION_THRESHOLD_VEH)[0]
         dets = []
-        for box, cls, conf in zip(results_veh.boxes.xyxy,
-                                  results_veh.boxes.cls,
-                                  results_veh.boxes.conf):
+        for box, cls, conf in zip(results_veh.boxes.xyxy, results_veh.boxes.cls, results_veh.boxes.conf):
             cls_int = int(cls)
-            # Filtrar únicamente las clases de vehículos que nos interesan:
-            # (2:car, 3:motorbike, 5:bus, 7:truck)
             if cls_int in (2, 3, 5, 7):
                 x1, y1, x2, y2 = map(int, box.tolist())
                 dets.append([x1, y1, x2, y2, float(conf)])
         dets_array = np.array(dets) if dets else np.empty((0, 5))
 
-        # 4.2) Actualizar SORT con esas detecciones
+        # 4.2) Actualizar SORT
         tracks = sort_tracker.update(dets_array)
 
-        # 4.3) Para cada track, extraer crop del vehículo
+        # 4.3) Extraer crops de vehículos
         H, W = frame.shape[:2]
-        rois_for_batch = []  # Lista de tuplas (track_id, frame_idx, x1c, y1c, x2c, y2c, crop_bgr_uint8)
-
+        rois_for_batch = []
         for trk in tracks:
             x1, y1, x2, y2, tid = trk
             tid = int(tid)
-            # Asegurarnos de que las coordenadas estén dentro de la imagen
             x1c, y1c = max(0, int(x1)), max(0, int(y1))
             x2c, y2c = min(W, int(x2)), min(H, int(y2))
-
-            # Descartar detecciones demasiado pequeñas (ruido)
             if (x2c - x1c) < 30 or (y2c - y1c) < 30:
                 continue
-
             crop_bgr = frame[y1c:y2c, x1c:x2c]
             if crop_bgr.size == 0:
                 continue
-
             rois_for_batch.append((tid, frame_idx, x1c, y1c, x2c, y2c, crop_bgr))
 
-        # 4.4) Si hay recortes, inferir en batch para detectar placas
+        # 4.4) Detectar placas en batch
         if rois_for_batch:
-            crops_batch = [item[6] for item in rois_for_batch]  # lista de arrays uint8
-
-            # YOLOv8-placa en GPU con batch
-            results_plate = plate_model(
-                crops_batch,
-                device=0,
-                imgsz=(640, 640),
-                conf=DETECTION_THRESHOLD_PLATE,
-                batch=True
-            )
-
-            # 4.5) Para cada resultado de placa en el batch:
+            crops_batch = [item[6] for item in rois_for_batch]
+            results_plate = plate_model(crops_batch, device=0, imgsz=(640, 640),
+                                        conf=DETECTION_THRESHOLD_PLATE, batch=True)
+            # 4.5) Evaluar cada resultado
             for i, res in enumerate(results_plate):
                 tid, fidx, x1c, y1c, x2c, y2c, _ = rois_for_batch[i]
-
-                # Si no hay cajas en este result, saltar
                 if res.boxes.shape[0] == 0:
                     continue
-
-                # Escoger la caja de mayor confianza dentro del crop
                 best_conf = 0.0
-                best_box = None  # En coordenadas [x1_crop, y1_crop, x2_crop, y2_crop]
-
+                best_box = None
                 for box, conf in zip(res.boxes.xyxy, res.boxes.conf):
                     c = float(conf)
                     if c > best_conf:
                         best_conf = c
                         best_box = box.cpu().numpy()
-
                 if best_box is None:
                     continue
-
-                # best_box ya está en píxeles relativos al propio crop (uint8)
                 bx1c, by1c, bx2c, by2c = map(int, best_box.tolist())
 
-                # Mapear esa caja de vuelta al frame completo:
                 abs_bx1 = x1c + bx1c
                 abs_by1 = y1c + by1c
                 abs_bx2 = x1c + bx2c
                 abs_by2 = y1c + by2c
 
-                # Comprobar si este lazo de track_id mejora lo que había antes
                 prev = best_plate_per_track.get(tid)
                 if (prev is None) or (best_conf > prev["score"]):
                     best_plate_per_track[tid] = {
@@ -285,79 +267,145 @@ def process_video_plate(self, video_path):
                         f"bbox_abs=[{abs_bx1},{abs_by1},{abs_bx2},{abs_by2}]"
                     )
 
-        # 4.6) Actualizar estado de Celery
+        # 4.6) Reportar progreso
         self.update_state(
             state="PROGRESS",
-            meta={
-                "processed_frames": processed_frames,
-                "total_frames": total_frames
-            }
+            meta={"processed_frames": processed_frames, "total_frames": total_frames}
         )
 
     cap.release()
 
-    # 5) Reabrir el vídeo para extraer el recorte FINAL de cada track
-    cap2 = cv2.VideoCapture(video_path)
-    ocr_requests = []  # lista de (track_id, frame_idx, crop_final)
+    # 5) Preparar anotaciones
+    final_frames = {}  
+    video_base = Path(video_path).stem
 
+    # 6) Reabrir vídeo y recopilar crops finales
+    cap2 = cv2.VideoCapture(video_path)
+    ocr_requests = []
     for tid, info in best_plate_per_track.items():
         bx1, by1, bx2, by2 = info["bbox"]
         fidx = info["frame"]
-
         cap2.set(cv2.CAP_PROP_POS_FRAMES, fidx - 1)
         ret2, frame_f = cap2.read()
         if not ret2:
             logger.debug(f"[DEBUG] No se pudo leer frame {fidx} para track {tid}")
             continue
-
         crop_final = frame_f[by1:by2, bx1:bx2]
         if crop_final.size == 0:
-            logger.debug(f"[DEBUG] Cropped area vacía para track {tid} en frame {fidx}")
+            logger.debug(f"[DEBUG] Cropped area vacía para track {tid}")
             continue
-
         ocr_requests.append((tid, fidx, crop_final))
-
+        final_frames[tid] = (frame_f, (bx1, by1, bx2, by2))
     cap2.release()
 
-    # 6) Llamar a la API de OCR en batch (una llamada por track final)
+    # 7) Llamar a OCR batch
     ocr_results = call_plate_recognizer_batch(ocr_requests)
 
-    # 7) Guardar CSV con las placas válidas
-    csv_full = Path(settings.MEDIA_ROOT) / CSV_UNICAS_REL
+    # 8) Anotar y guardar imágenes de vídeo
+    for tid, res in ocr_results.items():
+        frame_full, (bx1, by1, bx2, by2) = final_frames[tid]
+        h, w = frame_full.shape[:2]
+
+        # 1) Padding del 20 %
+        pad_x = int((bx2 - bx1) * 0.2)
+        pad_y = int((by2 - by1) * 0.2)
+
+        # Limitar a bordes de la imagen
+        x1p = max(0, bx1 - pad_x)
+        y1p = max(0, by1 - pad_y)
+        x2p = min(w, bx2 + pad_x)
+        y2p = min(h, by2 + pad_y)
+
+        # 2) Recorte centrado en el vehículo
+        crop_full = frame_full[y1p:y2p, x1p:x2p]
+
+        # 3) Dibujar sobre ese recorte, usando coords relativas
+        # Ajustamos las coords originales restando x1p/y1p
+        rx1, ry1 = bx1 - x1p, by1 - y1p
+        rx2, ry2 = bx2 - x1p, by2 - y1p
+
+        annotated = crop_full.copy()
+        cv2.rectangle(annotated, (rx1, ry1), (rx2, ry2), (0, 255, 0), 2)
+        cv2.putText(
+            annotated,
+            res["plate"],
+            (rx1, ry1 - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            (0, 255, 0),
+            2
+        )
+
+        # **BBDD**: creación/actualización de Matricula y asignación de Persona
+        matricula, creada = Matricula.objects.get_or_create(numero=res["plate"])
+        matricula.pais = res["country"].upper()
+        matricula.ultima_vez_vista = timezone.now()
+        if creada:
+            personas = list(Persona.objects.all())
+            matricula.esta_robado = False
+            matricula.delitos = ""
+            matricula.save()
+            if personas:
+                matricula.propietarios.add(random.choice(personas))
+        else:
+            matricula.save()
+
+        filename = f"{video_base}_track_{tid}_anotada.jpg"
+        path_out = ANNOTATED_DIR / filename
+        # Logging diagnóstico: ruta de archivo
+        logger.debug(f"[OCR] Guardando imagen anotada en: {path_out}")
+
+        # Guardar la imagen anotada
+        cv2.imwrite(str(path_out), annotated)
+
+    # 9) Guardar CSV con columna 'imagen'
+    timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+    csv_filename = f"placas_{timestamp}.csv"
+    csv_full = Path(settings.MEDIA_ROOT) / CSV_DIR / csv_filename
     with open(csv_full, "w", encoding="utf-8") as fcsv:
-        fcsv.write("track_id,plate,country,confidence,frame\n")
+        fcsv.write("track_id,plate,country,confidence,frame,imagen\n")
         for tid, info in best_plate_per_track.items():
             if tid not in ocr_results:
                 continue
             rr = ocr_results[tid]
-            line = f"{tid},{rr['plate']},{rr['country']},{rr['confidence']:.3f},{rr['frame']}\n"
+            imagen = f"{video_base}_track_{tid}"
+            line = (
+                f"{tid},{rr['plate']},{rr['country']},"
+                f"{rr['confidence']:.3f},{rr['frame']},{imagen}\n"
+            )
             fcsv.write(line)
 
-    # 8) Devolver estado final a Celery
+    # 10) Limpiar vídeo y temporales
+    try:
+        os.remove(video_path)
+    except Exception:
+        pass
+    tmp_dir = Path(settings.MEDIA_ROOT) / "recognition_plate" / "tmp"
+    for item in tmp_dir.glob("*"):
+        try:
+            item.unlink()
+        except Exception:
+            pass
+
+    from utilidades.models import SearchHistory
+    # número de placas reconocidas
+    result_count = len(ocr_results)
+    SearchHistory.objects.filter(id=history_id).update(result_count=result_count)
+
+    # 11) Devolver sólo la ruta al CSV
     return {
-        "processed_frames": processed_frames,
-        "total_frames": total_frames,
-        "csv_unicas": str(CSV_UNICAS_REL)
+        "csv_unicas": csv_filename
     }
 
 
 @shared_task(bind=True)
-def process_image_plate(self, rutas_imagenes):
+def process_image_plate(self, rutas_imagenes, history_id):
     # Umbrales
     DETECTION_THRESHOLD_PLATE = 0.45
     IOU_CLUSTER_THRESH        = 0.5
 
     # Paths
     WEIGHTS_PLATE = Path(settings.BASE_DIR) / "recognition_plate" / "models" / "license_plate_yolov8.pt"
-    CSV_DIR       = Path(settings.MEDIA_ROOT) / "recognition_plate" / "csv"
-    CSV_DIR.mkdir(parents=True, exist_ok=True)
-    CSV_UNICAS    = CSV_DIR / "placas_unicas.csv"
-    ANNOTATED_DIR = Path(settings.MEDIA_ROOT) / "recognition_plate" / "annotated"
-    ANNOTATED_DIR.mkdir(parents=True, exist_ok=True)
-
-    # API OCR
-    OCR_API_URL   = "https://api.platerecognizer.com/v1/plate-reader/"
-    OCR_API_TOKEN = settings.PLATE_RECOGNIZER_TOKEN  # asegúrate de tenerlo en settings
 
     # Carga modelo de placas
     plate_model = YOLO(str(WEIGHTS_PLATE))
@@ -432,13 +480,26 @@ def process_image_plate(self, rutas_imagenes):
                 continue
 
             top = data["results"][0]
+
+            raw_region = top.get("region")
+            if isinstance(raw_region, list) and raw_region:
+                region_obj   = raw_region[0]
+                country      = region_obj.get("value","").upper()
+                region_score = region_obj.get("score", 0.0)
+            elif isinstance(raw_region, dict):
+                country      = raw_region.get("code","").upper()
+                region_score = raw_region.get("score", 0.0)
+            else:
+                print(f"[DEBUG] Región no reconocida para placa {idx}, salto")
+                continue
+
+            if not country or country.lower()=="unknown" or region_score < MIN_REGION_SCORE:
+                print(f"[DEBUG] Región '{country}' con score={region_score:.3f} < {MIN_REGION_SCORE}, salto")
+                continue
+
             plate_text = top.get("plate","").upper().replace("-","").replace(" ","")
             score      = top.get("score",0.0)
-            country    = top.get("region",{}).get("code","")
             print(f"[DEBUG] OCR result {idx}: plate={plate_text}, score={score}, country={country}")
-
-            if not plate_text or not country or country.lower()=="unknown":
-                continue
 
             key = f"{nombre_img}_placa_{idx}"
             placas_finales[key] = {
@@ -479,7 +540,10 @@ def process_image_plate(self, rutas_imagenes):
 
     # 5️⃣ Volcado CSV y limpieza
     print(f"[DEBUG] total resultados_csv={len(resultados_csv)}")
-    with open(CSV_UNICAS,"w",encoding="utf-8") as f:
+    timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+    csv_filename = f"placas_{timestamp}.csv"
+    csv_full = Path(settings.MEDIA_ROOT) / CSV_DIR / csv_filename
+    with open(csv_full,"w",encoding="utf-8") as f:
         f.write("plate,country,confidence,imagen\n")
         for plate,country,score,img in resultados_csv:
             f.write(f"{plate},{country},{score:.3f},{img}\n")
@@ -488,4 +552,16 @@ def process_image_plate(self, rutas_imagenes):
         try: os.remove(p)
         except: pass
 
-    return {"total_imagenes":len(rutas_imagenes),"csv_unicas":str(CSV_UNICAS)}
+    # === LIMPIEZA DE TODO EL DIRECTORIO tmp/imagenes ===
+    tmp_img_dir = Path(settings.MEDIA_ROOT) / "recognition_plate" / "tmp" / "imagenes"
+    if tmp_img_dir.exists():
+        for f in tmp_img_dir.glob("*"):
+            try:
+                f.unlink()
+            except:
+                pass
+
+    from utilidades.models import SearchHistory
+    result_count = len(resultados_csv)
+    SearchHistory.objects.filter(id=history_id).update(result_count=result_count)
+    return {"total_imagenes":len(rutas_imagenes),"csv_unicas": csv_filename}

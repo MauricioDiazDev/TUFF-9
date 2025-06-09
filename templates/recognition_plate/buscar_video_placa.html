@@ -1,188 +1,78 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Buscar Matrícula en Vídeo{% endblock %}
+{% block title %}Reconocimiento de Matrículas por Vídeo{% endblock %}
 
 {% block content %}
-<div class="container">
-  <h1 class="mb-4">Buscar Matrícula en Vídeo</h1>
+<h4 class="fw-bold py-3 mb-4">Reconocimiento de matrículas mediante vídeo</h4>
 
-  {% if form %}
-  <div class="row">
-    <div class="col-md-6">
-      <form method="post" enctype="multipart/form-data" novalidate id="videoForm">
-        {% csrf_token %}
-        {{ form.non_field_errors }}
-
-        <div class="mb-3">
-          {{ form.video.label_tag }}
-          {{ form.video }}
-          {% if form.video.help_text %}
-          <div class="form-text">{{ form.video.help_text }}</div>
-          {% endif %}
-          {{ form.video.errors }}
-        </div>
-
-        <div class="mb-3">
-          {{ form.frame_step.label_tag }}
-          {{ form.frame_step }}
-          {% if form.frame_step.help_text %}
-          <div class="form-text">{{ form.frame_step.help_text }}</div>
-          {% endif %}
-          {{ form.frame_step.errors }}
-        </div>
-
-        <div class="mb-3">
-          {{ form.threshold.label_tag }}
-          {{ form.threshold }}
-          {% if form.threshold.help_text %}
-          <div class="form-text">{{ form.threshold.help_text }}</div>
-          {% endif %}
-          {{ form.threshold.errors }}
-        </div>
-
-        <button type="submit" class="btn btn-primary">Subir Vídeo y Comenzar</button>
-      </form>
-    </div>
-  </div>
-  {% endif %}
-
-  {# Campo oculto que contiene el task_id tras hacer POST exitoso #}
-  {% if task_id %}
-  <input type="hidden" name="task_id" value="{{ task_id }}">
-  {% endif %}
-
-  {# Sección de progreso: invisible al principio #}
-  <div id="progressSection" class="mt-4" style="display: none;">
-    <h5>Progreso del Procesamiento:</h5>
-    <div class="progress mb-3">
-      <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0"
-        aria-valuemin="0" aria-valuemax="100">
-        0%
-      </div>
-    </div>
-    <div id="statusText"></div>
-  </div>
-
-  {# Sección de resultado final: oculta al principio #}
-  <div id="resultSection" class="mt-4" style="display: none;">
-    <h5>Procesamiento Finalizado</h5>
-    <ul class="list-group">
-      <li class="list-group-item">
-        <a id="linkCsvUnicas" href="#" download>
-          Descargar CSV de Placas Únicas
-        </a>
-      </li>
-      <li class="list-group-item">
-        <a id="linkCsvOcurrencias" href="#" download>
-          Descargar CSV de Ocurrencias
-        </a>
-      </li>
-    </ul>
-    <a href="{% url 'recognition_plate:reconocer_placa_video' %}" class="btn btn-secondary mt-3">
-      Volver
-    </a>
+<!-- Descripción funcional -->
+<div class="card mb-4">
+  <div class="card-body">
+    <p>
+      Esta herramienta permite detectar y reconocer matrículas en un vídeo. Sube un archivo de vídeo en formato MP4, AVI
+      o MOV de hasta 500 MB y pulsa <strong>Procesar</strong>. Al terminar, serás redirigido a la página de resultados.
+    </p>
   </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<!-- Formulario para subir vídeo -->
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="post" enctype="multipart/form-data" id="videoForm">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+
+      <div class="mb-3">
+        {{ form.video.label_tag }}
+        {{ form.video }}
+        {% if form.video.help_text %}
+        <div class="form-text">{{ form.video.help_text }}</div>
+        {% endif %}
+        {{ form.video.errors }}
+      </div>
+
+      <button type="submit" class="btn btn-primary">
+        <i class="bx bx-film me-1"></i> Procesar Vídeo
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Estado de procesamiento -->
+{% if task_id %}
+<div class="card">
+  <div class="card-body text-center">
+    <div class="spinner-border text-primary mb-3" role="status">
+      <span class="visually-hidden">Procesando...</span>
+    </div>
+    <p class="mb-0">Procesando vídeo... Por favor, espera.</p>
+  </div>
+</div>
+
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const videoForm = document.getElementById('videoForm');
-    const progressSection = document.getElementById('progressSection');
-    const progressBar = document.getElementById('progressBar');
-    const statusText = document.getElementById('statusText');
-    const resultSection = document.getElementById('resultSection');
-    const linkCsvUnicas = document.getElementById('linkCsvUnicas');
-    const linkCsvOcurrencias = document.getElementById('linkCsvOcurrencias');
-
-    if (videoForm) {
-      videoForm.addEventListener('submit', function (event) {
-        event.preventDefault();
-
-        // Ocultar el formulario y mostrar la sección de progreso
-        videoForm.style.display = 'none';
-        progressSection.style.display = 'block';
-        statusText.innerText = 'Encolando tarea...';
-
-        // Preparamos FormData para enviar el vídeo
-        const fd = new FormData(videoForm);
-        fetch("{% url 'recognition_plate:reconocer_placa_video' %}", {
-          method: 'POST',
-          body: fd,
-          headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
-          }
-        })
-          .then(response => response.text())
-          .then(html => {
-            // Parseamos el HTML devuelto para extraer el campo oculto task_id
-            const temp = document.createElement('div');
-            temp.innerHTML = html;
-            const taskInput = temp.querySelector('input[name="task_id"]');
-            if (!taskInput) {
-              throw new Error('No se recibió task_id del servidor');
-            }
-            const taskId = taskInput.value;
-            statusText.innerText = 'Procesando vídeo (Tarea: ' + taskId + ')';
-
-            // Iniciamos el sondeo al endpoint de estado cada 2 segundos
-            pollTaskStatus(taskId);
-          })
-          .catch(err => {
-            console.error(err);
-            statusText.innerText = 'Error al encolar la tarea. Revisa la consola.';
-          });
-      });
-    }
-
-    function pollTaskStatus(taskId) {
-      const url = "{% url 'recognition_plate:estado_video_placa' 'TASK_PLACEHOLDER' %}"
-        .replace('TASK_PLACEHOLDER', taskId);
-
-      fetch(url)
-        .then(resp => resp.json())
+  (function () {
+    const intervalo = setInterval(() => {
+      fetch("{% url 'recognition_plate:verificar_estado_tarea' task_id %}")
+        .then(r => r.json())
         .then(data => {
-          const info = data.info;
-          if (data.state === 'PENDING' || data.state === 'STARTED') {
-            // Actualizar barra de progreso
-            const processed = info.processed_frames;
-            const total = info.total_frames;
-            const pct = total > 0 ? Math.round((processed / total) * 100) : 0;
-            progressBar.style.width = pct + '%';
-            progressBar.setAttribute('aria-valuenow', pct);
-            progressBar.innerText = pct + '%';
-            statusText.innerText = `Procesando: ${processed} de ${total} frames...`;
-
-            setTimeout(() => pollTaskStatus(taskId), 2000);
-          }
-          else if (data.state === 'SUCCESS') {
-            // Progreso al 100% y mostrar enlaces
-            progressBar.style.width = '100%';
-            progressBar.setAttribute('aria-valuenow', 100);
-            progressBar.innerText = '100%';
-            statusText.innerText = 'Finalizado.';
-
-            // Rellenar enlaces a los CSV
-            const csvUnicasUrl = info.csv_unicas_url;
-            const csvOcurrenciasUrl = info.csv_ocurrencias_url;
-
-            linkCsvUnicas.setAttribute('href', csvUnicasUrl);
-            linkCsvOcurrencias.setAttribute('href', csvOcurrenciasUrl);
-
-            progressSection.style.display = 'none';
-            resultSection.style.display = 'block';
-          }
-          else if (data.state === 'FAILURE') {
-            statusText.innerText = 'Error en el procesamiento del vídeo.';
+          if (data.estado === 'completo') {
+            clearInterval(intervalo);
+            // Cuando termine, redirigimos a resultados (la vista carga CSV y anotadas)
+            window.location.href = "{% url 'recognition_plate:mostrar_resultados_placas' %}";
+          } else if (data.estado === 'error') {
+            clearInterval(intervalo);
+            document.querySelector('.card:last-of-type .card-body')
+              .innerHTML = '<div class="alert alert-danger">Error al procesar el vídeo.</div>';
           }
         })
-        .catch(err => {
-          console.error(err);
-          statusText.innerText = 'Error al consultar el estado del task.';
+        .catch(() => {
+          clearInterval(intervalo);
+          document.querySelector('.card:last-of-type .card-body')
+            .innerHTML = '<div class="alert alert-danger">Error de red al consultar el estado.</div>';
         });
-    }
-  });
+    }, 3000);
+  })();
 </script>
+{% endif %}
 {% endblock %}

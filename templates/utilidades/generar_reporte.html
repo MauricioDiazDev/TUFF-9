@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Generar Reporte{% endblock %}
+
+{% block content %}
+<h4 class="fw-bold py-3 mb-4">Generar Reporte</h4>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+
+            <div class="mb-3">
+                {{ form.report_type.label_tag }}
+                {{ form.report_type }}
+                {{ form.report_type.errors }}
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="bx bx-file"></i> Generar
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

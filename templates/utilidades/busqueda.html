@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Búsqueda Rápida{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">Búsqueda Rápida</h4>
+    <a href="{% url 'dashboard:panel' %}" class="btn btn-outline-secondary btn-sm">Volver al menú</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" action="{% url 'utilidades:busqueda_resultados' %}">
+            <div class="input-group">
+                <input type="text" name="q" value="{{ request.GET.q }}" class="form-control"
+                    placeholder="Introduce DNI o Matrícula…" autofocus>
+                <button class="btn btn-primary" type="submit">
+                    <i class="bx bx-search-alt-2 me-1"></i> Buscar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Confirmar Eliminación{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold">Confirmar Eliminación</h4>
+    <a href="{% url 'utilidades:busqueda_rapida' %}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <p>¿Estás seguro de que deseas eliminar este registro?</p>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Eliminar</button>
+            <a href="{% url 'utilidades:busqueda_rapida' %}" class="btn btn-secondary ms-2">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
