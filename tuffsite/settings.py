@@ -181,6 +181,6 @@ CELERY_RESULT_SERIALIZER = 'json'
 # Zona horaria de Celery (coincide con Django)
 CELERY_TIMEZONE = 'Europe/Madrid'
 
-PLATE_RECOGNIZER_TOKEN="742c6ede255a89388a40e99605f1be8c5bcc8d97"
+PLATE_RECOGNIZER_TOKEN="" # Aqui va la api
 
 OCR_API_URL="https://api.platerecognizer.com/v1/plate-reader/"
