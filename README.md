@@ -6,6 +6,17 @@ TUFF-9 is a Django-based web platform for access control and identity recognitio
 
 ---
 
+## 👥 Authors
+
+This project was developed collaboratively by:
+
+- [Mauricio Díaz](https://github.com/MauricioDiazDev)  
+- [Juan Manuel Torices](https://github.com/toriices)
+
+Both repositories contain the same version of the project, published individually for academic and portfolio purposes.
+
+---
+
 ## 🚀 Features
 
 ### 🔍 Facial Recognition
