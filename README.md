@@ -17,6 +17,16 @@ Both repositories contain the same version of the project, published individuall
 
 ---
 
+## 🎓 Academic Context
+
+This project was developed as part of an academic assignment for a higher education program.  
+It is intended for **educational and demonstration purposes only**.  
+No real user data is stored or processed, and the configuration is limited to a **local development environment**.
+
+Please do not use this setup directly in production without applying proper security and environment segregation.
+
+---
+
 ## 🚀 Features
 
 ### 🔍 Facial Recognition
